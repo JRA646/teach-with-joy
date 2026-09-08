@@ -1,0 +1,196 @@
+/* Mobile-first refinements for public pages and authenticated workspace */
+
+img,svg{max-width:100%}
+button,input,select,textarea{max-width:100%}
+
+@media (max-width: 768px){
+  .public-header,.app-header{height:58px;padding:0 14px}
+  .public-header .brand{font-size:13px}
+  .header-actions{gap:6px}
+  .header-actions .btn{padding:8px 10px;font-size:10px}
+
+  .hero{min-height:0}
+  .hero-copy{padding:42px 20px 34px}
+  .hero h1{font-size:38px;line-height:1.04;margin:12px 0 14px}
+  .hero p{font-size:13px;line-height:1.7}
+  .hero-actions{flex-direction:column;align-items:stretch}
+  .hero-actions .btn{width:100%}
+  .hero-image{height:240px;min-height:240px}
+  .hero-trust{gap:10px;margin-top:18px}
+  .hero-trust span{font-size:9px}
+
+  .feature-strip{max-width:calc(100% - 20px);margin:-12px auto 20px}
+  .feature{padding:14px}
+  .content-section{max-width:calc(100% - 20px);padding:20px;margin-bottom:18px;gap:22px}
+  .content-section h2,.page-body h2{font-size:24px}
+  .info-card{padding:14px}
+  .testimonial-section,.cta-section{max-width:calc(100% - 20px)}
+  .quote-card{align-items:flex-start;padding:15px}
+  .cta-section{padding:20px;margin-bottom:30px}
+  .cta-section h2{font-size:21px}
+  .public-footer{padding:25px 16px 20px}
+  .footer-main{gap:15px}
+  .footer-links{gap:10px}
+
+  .page-hero{padding:42px 20px 34px}
+  .page-hero h1{font-size:34px;line-height:1.08}
+  .page-hero p{font-size:12px}
+  .page-body{padding:22px 12px 42px}
+  .page-cta{flex-direction:column;align-items:stretch}
+  .page-cta .btn{width:100%}
+  .pricing-grid{grid-template-columns:1fr}
+  .price-card{padding:19px}
+  .price-value{font-size:32px}
+
+  .app-header{position:sticky;top:0;z-index:30}
+  .top-user>div:last-child{display:none}
+  .notification-button{width:34px;height:34px}
+  .app-body{display:block;min-height:calc(100vh - 58px);padding-bottom:64px}
+  .sidebar{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    top:auto;
+    z-index:40;
+    width:100%;
+    height:64px;
+    padding:6px 8px;
+    border-right:0;
+    border-top:1px solid #e8e5ef;
+    display:flex;
+    flex-direction:row;
+    align-items:stretch;
+    justify-content:flex-start;
+    gap:2px;
+    overflow-x:auto;
+    background:rgba(255,255,255,.97);
+    -webkit-overflow-scrolling:touch;
+  }
+  .nav-item,.nav-item.bottom{
+    flex:1 0 62px;
+    min-width:62px;
+    height:52px;
+    margin:0;
+    padding:6px 4px;
+    justify-content:center;
+    flex-direction:column;
+    gap:3px;
+    font-size:0;
+    border-radius:8px;
+  }
+  .nav-item svg{width:18px;height:18px;flex:0 0 auto}
+  .nav-item.active{font-size:8px}
+  .nav-item.active svg{width:17px;height:17px}
+  .main-content{padding:16px 12px 24px;min-width:0}
+  .page-title{align-items:flex-start;gap:12px;margin-bottom:16px}
+  .page-title h1{font-size:22px;line-height:1.15}
+  .page-title p{font-size:10px;line-height:1.5}
+  .page-title>.btn{flex:0 0 auto;padding:8px 10px;font-size:9px}
+  .stat-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .stat{padding:12px}
+  .stat strong{font-size:20px}
+  .stat small{font-size:8px}
+  .dashboard-grid{grid-template-columns:1fr;gap:10px}
+  .panel{padding:14px;min-width:0}
+  .booking-card{align-items:flex-start;gap:9px;padding:10px}
+  .booking-card .status{margin-left:auto}
+  .booking-row,.subject-row{gap:7px}
+  .booking-row strong,.subject-row strong{font-size:10px}
+  .booking-row small,.subject-row small{font-size:8px}
+
+  .schedule-layout{grid-template-columns:1fr;gap:10px}
+  .calendar-panel{min-height:0}
+  .calendar-grid button{height:34px}
+  .weekday-row span{font-size:8px}
+  .day-panel{order:2}
+  .schedule-layout>.panel:last-child{order:3}
+  .slot-list{grid-template-columns:1fr 1fr;gap:7px}
+  .time-slot{padding:10px 8px;font-size:10px}
+  .schedule-layout .panel{overflow:hidden}
+
+  .subject-layout{grid-template-columns:1fr;gap:10px}
+  .subject-row{padding:10px 0}
+  .profile-main{align-items:flex-start;gap:12px;margin-bottom:18px}
+  .big-avatar{width:52px;height:52px;font-size:18px}
+  .profile-main h2{font-size:18px}
+  .profile-form{max-width:none}
+
+  .modal-backdrop{padding:12px}
+  .auth-modal{width:100%;max-height:calc(100vh - 24px);overflow:auto;padding:22px 18px;border-radius:14px}
+  .auth-modal h2{font-size:20px}
+  .stack{gap:11px}
+  .stack input,.stack select,.stack textarea{font-size:16px;min-height:42px}
+
+  .messages-page{max-width:none}
+  .messages-shell{min-height:calc(100vh - 155px);height:calc(100vh - 155px)}
+  .conversation-list{max-height:190px;padding:8px}
+  .conversation-person{padding:8px}
+  .chat-messages{min-height:0;padding:12px}
+  .chat-compose{padding:8px;position:sticky;bottom:0}
+  .chat-compose input{font-size:16px;min-height:42px}
+  .chat-compose .btn{min-height:42px;padding:8px 11px}
+  .message-bubble{max-width:88%;padding:8px 10px}
+  .message-bubble p{font-size:11px}
+
+  .notification-backdrop{padding:64px 8px 8px;place-items:start center}
+  .notification-modal{width:100%;max-height:calc(100vh - 80px);border-radius:12px}
+}
+
+@media (max-width: 480px){
+  .public-header{padding:0 10px}
+  .public-header .brand-icon{width:28px;height:28px}
+  .header-actions .btn.secondary{display:none}
+  .hero h1{font-size:33px}
+  .hero-copy{padding:34px 16px 28px}
+  .hero-image{height:190px;min-height:190px}
+  .feature-strip{max-width:calc(100% - 16px)}
+  .feature{padding:12px}
+  .content-section,.testimonial-section,.cta-section{max-width:calc(100% - 16px)}
+  .content-section{padding:16px}
+  .page-hero{padding:34px 16px 28px}
+  .page-hero h1{font-size:30px}
+  .page-body{padding-left:8px;padding-right:8px}
+
+  .main-content{padding:13px 9px 20px}
+  .page-title{display:block}
+  .page-title>.btn{margin-top:10px;width:100%}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .stat strong{font-size:18px}
+  .panel{padding:12px;border-radius:9px}
+  .month-head strong{font-size:12px}
+  .calendar-grid{gap:2px}
+  .calendar-grid button{height:31px;font-size:9px}
+  .slot-list{grid-template-columns:1fr 1fr}
+  .detail-line{font-size:9px}
+  .price-row strong{font-size:16px}
+
+  .messages-shell{height:calc(100vh - 145px);min-height:500px}
+  .conversation-list{max-height:165px}
+  .conversation-person strong{font-size:9px}
+  .chat-head{padding:10px 11px}
+  .chat-messages{padding:10px 8px}
+  .chat-compose .btn{font-size:0;width:44px;padding:0;display:grid;place-items:center}
+  .notification-item{padding:11px 7px}
+  .notification-item p{font-size:9px}
+
+  .nav-item{min-width:58px;flex-basis:58px}
+  .nav-item.active{font-size:7px}
+}
+
+@media (max-width: 360px){
+  .brand{gap:5px}
+  .brand span{font-size:12px}
+  .top-user{gap:5px}
+  .user-avatar{width:28px;height:28px}
+  .notification-button{width:32px;height:32px}
+  .hero h1{font-size:29px}
+  .stat-grid{gap:6px}
+  .stat{padding:10px}
+  .stat strong{font-size:16px}
+  .nav-item{min-width:52px;flex-basis:52px}
+}
+
+@media (hover:none){
+  .btn:hover:not(:disabled),.schedule-card:hover,.conversation-person:hover,.notification-item:hover{transform:none}
+}
