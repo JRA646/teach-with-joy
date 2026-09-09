@@ -1,0 +1,38 @@
+name: Fix student authentication UI
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update registration flow
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/PublicSite.tsx')
+          s = p.read_text()
+          s = s.replace("  const [role, setRole] = useState<'student' | 'teacher'>('student')\n", "")
+          s = s.replace("            options: { data: { full_name: name, role } },", "            options: { data: { full_name: name, role: 'student' } },")
+          s = s.replace("        <p>{mode === 'login' ? 'Log in to continue to your TeachWithJoy workspace.' : 'Choose a role and start learning or teaching.'}</p>", "        <p>{mode === 'login' ? 'Log in to continue to your TeachWithJoy workspace.' : 'Create your student account and start learning with TeachWithJoy.'}</p>")
+          s = s.replace("            <label>Role<select value={role} onChange={(event) => setRole(event.target.value as 'student' | 'teacher')}><option value=\"student\">Student</option><option value=\"teacher\">Teacher</option></select></label>\n", "")
+          s = s.replace("        setError('Account created. Check your email to confirm your address, then log in.')", "        setError('Account created, but email confirmation is enabled in Supabase. Disable Confirm Email to allow automatic dashboard access.')")
+          p.write_text(s)
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/components/PublicSite.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "Fix student-only registration flow"
+          git push
+      - name: Remove workflow
+        if: success()
+        run: |
+          rm -f .github/workflows/fix-auth.yml
+          git add .github/workflows/fix-auth.yml
+          git diff --cached --quiet || (git commit -m "Remove temporary auth fix workflow" && git push)
