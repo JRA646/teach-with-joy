@@ -27,11 +27,6 @@ export default function AdminSite() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  async function loadTheme() {
-    const { data, error } = await supabase.from('site_theme').select('*').eq('id', 1).maybeSingle()
-    if (!error && data) setTheme({ ...defaultTheme, ...data })
-  }
-
   async function checkAdmin() {
     const { data, error } = await supabase.rpc('is_admin')
     return { authorized: !error && data === true, error: error?.message || '' }
@@ -52,7 +47,6 @@ export default function AdminSite() {
 
   async function initialize() {
     setError('')
-    await loadTheme()
     const { data, error } = await supabase.auth.getSession()
     if (error) { setError(error.message); setLoading(false); return }
     const current = data.session
@@ -101,22 +95,12 @@ export default function AdminSite() {
 
   async function signOut() { await supabase.auth.signOut(); window.location.href = '/' }
 
-  if (loading) return <div className="admin-loader">Loading {theme.site_name || 'TeachWithJoy'} Admin...</div>
-  if (!session || !authorized) return <Login error={error} submit={login} theme={theme} />
+  if (loading) return <div className="admin-loader">Loading TeachWithJoy Admin...</div>
+  if (!session || !authorized) return <Login error={error} submit={login} />
 
-  const themeVars = {
-    '--admin-primary': theme.primary_color || defaultTheme.primary_color,
-    '--admin-primary-dark': theme.primary_dark || defaultTheme.primary_dark,
-    '--admin-accent': theme.accent_color || defaultTheme.accent_color,
-    '--admin-background': theme.background_color || defaultTheme.background_color,
-    '--admin-surface': theme.surface_color || defaultTheme.surface_color,
-    '--admin-text': theme.text_color || defaultTheme.text_color,
-    '--admin-muted': theme.muted_color || defaultTheme.muted_color,
-  } as React.CSSProperties
-
-  return <div className="admin-shell" style={themeVars}>
+  return <div className="admin-shell">
     <aside className="admin-sidebar">
-      <div className="admin-brand"><span><GraduationCap size={19} /></span><b>{theme.site_name || 'TeachWithJoy'}</b></div>
+      <div className="admin-brand"><span><GraduationCap size={19} /></span><b>TeachWithJoy CMS</b></div>
       <Nav active={page === 'overview'} onClick={() => setPage('overview')}><LayoutDashboard /> Overview</Nav>
       {editablePages.map(x => <Nav key={x} active={page === x} onClick={() => setPage(x)}>{labels[x]}</Nav>)}
       <Nav active={page === 'messages'} onClick={() => setPage('messages')}><Mail /> Messages</Nav>
@@ -124,7 +108,7 @@ export default function AdminSite() {
       <button className="admin-nav logout" onClick={signOut}><LogOut /> Sign out</button>
     </aside>
     <main className="admin-main">
-      <header className="admin-topbar"><div><span className="admin-kicker">{theme.site_name || 'TEACHWITHJOY'} CMS</span><h2>{labels[page]}</h2></div><button className="admin-view-site" onClick={() => window.open('/', '_blank')}>View site</button></header>
+      <header className="admin-topbar"><div><span className="admin-kicker">TEACHWITHJOY CMS</span><h2>{labels[page]}</h2></div><button className="admin-view-site" onClick={() => window.open('/', '_blank')}>View site</button></header>
       {error && <div className="admin-error">{error}</div>}
       {success && <div className="admin-success">✓ {success}</div>}
       {page === 'overview' ? <Overview go={setPage} /> : page === 'theme' ? <AdminTheme theme={theme} setTheme={setTheme} save={save} /> : page === 'messages' ? <AdminMessages /> : <AdminEditor page={page} value={content[page] || {}} setContent={setContent} save={save} />}
@@ -132,9 +116,8 @@ export default function AdminSite() {
   </div>
 }
 
-function Login({ error, submit, theme }: { error: string; submit: (event: React.FormEvent<HTMLFormElement>) => void; theme: any }) {
-  const vars = { '--admin-primary': theme.primary_color || '#ff7f32', '--admin-primary-dark': theme.primary_dark || '#e7651c', '--admin-accent': theme.accent_color || '#ffe28a', '--admin-background': theme.background_color || '#fff4e8', '--admin-surface': theme.surface_color || '#ffffff', '--admin-text': theme.text_color || '#3a2418', '--admin-muted': theme.muted_color || '#8a6f5a' } as React.CSSProperties
-  return <div className="admin-auth-page" style={vars}><form className="admin-login-card" onSubmit={submit}><div className="admin-brand"><span><GraduationCap /></span><b>{theme.site_name || 'TeachWithJoy'}</b></div><div className="admin-kicker">ADMINISTRATION</div><h1>Manage your site.</h1><p>Sign in with an authorized administrator account.</p><input name="email" type="email" placeholder="Email" required /><input name="password" type="password" placeholder="Password" required />{error && <div className="admin-error">{error}</div>}<button className="admin-btn primary">Sign in</button><button type="button" className="admin-back" onClick={() => window.location.href = '/'}>← Back to site</button></form></div>
+function Login({ error, submit }: { error: string; submit: (event: React.FormEvent<HTMLFormElement>) => void }) {
+  return <div className="admin-auth-page"><form className="admin-login-card" onSubmit={submit}><div className="admin-brand"><span><GraduationCap /></span><b>TeachWithJoy CMS</b></div><div className="admin-kicker">ADMINISTRATION</div><h1>Manage your site.</h1><p>Sign in with an authorized administrator account.</p><input name="email" type="email" placeholder="Email" required /><input name="password" type="password" placeholder="Password" required />{error && <div className="admin-error">{error}</div>}<button className="admin-btn primary">Sign in</button><button type="button" className="admin-back" onClick={() => window.location.href = '/'}>← Back to site</button></form></div>
 }
 
 function Nav({ children, active, onClick }: { children: React.ReactNode; active: boolean; onClick: () => void }) { return <button className={active ? 'admin-nav active' : 'admin-nav'} onClick={onClick}>{children}</button> }
