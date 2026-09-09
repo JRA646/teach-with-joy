@@ -1,0 +1,295 @@
+import { useEffect, useMemo, useState } from 'react'
+import {
+  ArrowRight,
+  BookOpen,
+  CalendarDays,
+  Check,
+  Clock3,
+  GraduationCap,
+  Mail,
+  MapPin,
+  MessageCircle,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  X,
+} from 'lucide-react'
+import { supabase } from '../lib/supabase'
+
+type Page = 'home' | 'about' | 'schedule' | 'pricing' | 'contact'
+type AuthMode = 'login' | 'register'
+
+type Content = Record<string, any>
+
+const defaults: Record<Page, Content> = {
+  home: {
+    heroEyebrow: 'PERSONALIZED ONLINE LESSONS',
+    heroTitle: 'Learn smarter, achieve more.',
+    heroText: 'One-on-one lessons, flexible scheduling, and supportive teachers—all in one calm learning experience.',
+    heroImage: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1400&q=85',
+    heroPrimary: 'Book a Session',
+    heroSecondary: 'Explore Scheduling',
+    whyEyebrow: 'WHY TEACHWITHJOY',
+    whyTitle: 'A calmer way to learn.',
+    whyText: 'Skip the scattered messages and complicated booking flows. TeachWithJoy gives students a clear path from choosing a subject to attending the lesson.',
+    features: [
+      { title: '1-on-1 Lessons', text: 'Personalized for you', icon: 'users' },
+      { title: 'Flexible Schedule', text: 'Book around your day', icon: 'calendar' },
+      { title: 'Secure Access', text: 'Your account stays protected', icon: 'shield' },
+      { title: 'Progress Focused', text: 'Learn with purpose', icon: 'sparkles' },
+    ],
+    infoCards: [
+      { title: 'Meaningful lessons', text: 'Build skills with focused, teacher-led sessions.', icon: 'book' },
+      { title: 'Real availability', text: 'See bookable teacher slots before you commit.', icon: 'calendar' },
+      { title: 'Human support', text: 'Ask questions and stay connected when it matters.', icon: 'message' },
+      { title: 'A joyful rhythm', text: 'Make learning easier to return to week after week.', icon: 'sparkles' },
+    ],
+    testimonial: 'Joy is an amazing teacher.',
+    testimonialText: 'The lessons are easy to understand and very engaging. The whole experience feels organized and personal.',
+    testimonialAuthor: 'Anna, Student',
+    ctaEyebrow: 'READY WHEN YOU ARE',
+    ctaTitle: 'Make your next lesson your best one.',
+    ctaText: 'Create your account and discover teachers, schedules, and pricing in one place.',
+  },
+  about: {
+    eyebrow: 'ABOUT TEACHWITHJOY',
+    title: 'Teaching that feels personal.',
+    text: 'TeachWithJoy connects learners with thoughtful teachers through simple scheduling, focused one-on-one lessons, and a workspace that keeps every session organized.',
+    bodyTitle: 'Built around better teaching.',
+    bodyText: 'TeachWithJoy is designed to make learning feel less transactional and more human. Students get clarity, teachers get structure, and both sides spend less time managing logistics.',
+    cards: [
+      { title: 'Teacher first', text: 'Give teachers a clean workspace to manage availability, subjects, and upcoming sessions.', icon: 'graduation' },
+      { title: 'Student centered', text: 'Help students make confident choices about subjects, times, and lesson goals.', icon: 'users' },
+      { title: 'Trusted experience', text: 'Keep sign-in and account access connected to secure Supabase authentication.', icon: 'shield' },
+    ],
+  },
+  schedule: {
+    eyebrow: 'SCHEDULING',
+    title: 'Find a time that fits your life.',
+    text: 'Choose a subject, browse real teacher availability, and reserve a session without the back-and-forth. Your upcoming lessons stay in one place.',
+    steps: [
+      { title: 'Choose a subject', text: 'Find the lesson that matches your goal.' },
+      { title: 'Pick an open slot', text: 'Book from teacher availability.' },
+      { title: 'Attend and learn', text: 'Keep everything together in your workspace.' },
+    ],
+  },
+  pricing: {
+    eyebrow: 'PRICING',
+    title: 'Simple plans for steady progress.',
+    text: 'Start with flexible lesson credits or choose a monthly plan when you are ready to make learning a consistent habit.',
+    plans: [
+      { name: 'Starter', price: '$19', detail: 'per lesson', items: ['1 focused lesson', 'Teacher availability', 'Secure account'] },
+      { name: 'Growth', price: '$69', detail: 'per month', featured: true, items: ['4 lessons per month', 'Flexible scheduling', 'Priority booking', 'Progress-friendly routine'] },
+      { name: 'Flexible', price: '$99', detail: 'custom', items: ['Custom lesson bundle', 'Multiple subjects', 'Schedule around you', 'Best for changing needs'] },
+    ],
+  },
+  contact: {
+    eyebrow: 'CONTACT',
+    title: 'We are here to help.',
+    text: 'Questions about lessons, schedules, or getting started? Reach the TeachWithJoy team and we will help you find the right next step.',
+    email: 'hello@teachwithjoy.app',
+    supportHours: 'Monday–Friday, 9:00 AM–6:00 PM',
+    onlineText: 'Serving learners wherever they are',
+    formTitle: 'Tell us what you need.',
+  },
+}
+
+const iconMap: Record<string, React.ReactNode> = {
+  users: <Users />,
+  calendar: <CalendarDays />,
+  shield: <ShieldCheck />,
+  sparkles: <Sparkles />,
+  book: <BookOpen />,
+  message: <MessageCircle />,
+  graduation: <GraduationCap />,
+}
+
+function mergeContent(page: Page, value: Content | undefined): Content {
+  return { ...defaults[page], ...(value || {}) }
+}
+
+export default function ManagedPublicSite() {
+  const [data, setData] = useState<Record<string, Content>>({})
+  const [theme, setTheme] = useState<Content>({})
+  const [page, setPage] = useState<Page>(getInitialPage)
+  const [mode, setMode] = useState<AuthMode | null>(null)
+
+  const load = async () => {
+    const [contentResult, themeResult] = await Promise.all([
+      supabase.from('site_content').select('page,content'),
+      supabase.from('site_theme').select('*').eq('id', 1).maybeSingle(),
+    ])
+    if (contentResult.data) {
+      const next: Record<string, Content> = {}
+      contentResult.data.forEach((row: any) => { next[row.page] = row.content || {} })
+      setData(next)
+    }
+    if (themeResult.data) setTheme(themeResult.data)
+  }
+
+  useEffect(() => {
+    void load()
+    const contentChannel = supabase
+      .channel('public-site-content')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_content' }, () => void load())
+      .subscribe()
+    const themeChannel = supabase
+      .channel('public-site-theme')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_theme' }, () => void load())
+      .subscribe()
+    return () => {
+      supabase.removeChannel(contentChannel)
+      supabase.removeChannel(themeChannel)
+    }
+  }, [])
+
+  useEffect(() => {
+    const root = document.documentElement
+    const map: Record<string, string> = {
+      primary_color: '--twj-primary',
+      primary_dark: '--twj-primary-dark',
+      accent_color: '--twj-accent',
+      background_color: '--twj-background',
+      surface_color: '--twj-surface',
+      text_color: '--twj-text',
+      muted_color: '--twj-muted',
+    }
+    Object.entries(map).forEach(([key, css]) => {
+      if (theme[key]) root.style.setProperty(css, String(theme[key]))
+    })
+  }, [theme])
+
+  const current = useMemo(() => mergeContent(page, data[page]), [page, data])
+
+  const goTo = (next: Page) => {
+    setPage(next)
+    window.history.replaceState({}, '', next === 'home' ? '/' : `/#${next}`)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  return (
+    <div className="public-site">
+      <header className="public-header">
+        <button className="brand brand-link" onClick={() => goTo('home')} aria-label="TeachWithJoy home">
+          <div className="brand-icon"><GraduationCap size={20} /></div>
+          <strong>{theme.site_name || 'TeachWithJoy'}</strong>
+        </button>
+        <nav aria-label="Primary navigation">
+          {(['home', 'about', 'schedule', 'pricing', 'contact'] as Page[]).map((item) => (
+            <button key={item} className={page === item ? 'nav-link active' : 'nav-link'} onClick={() => goTo(item)}>
+              {item === 'home' ? 'Home' : item === 'schedule' ? 'Scheduling' : item[0].toUpperCase() + item.slice(1)}
+            </button>
+          ))}
+        </nav>
+        <div className="header-actions">
+          <button className="btn secondary" onClick={() => setMode('login')}>Log In</button>
+          <button className="btn primary" onClick={() => setMode('register')}>Get Started</button>
+        </div>
+      </header>
+
+      <main>{page === 'home' ? <Home content={current} goTo={goTo} auth={setMode} /> : <Interior page={page} content={current} auth={setMode} />}</main>
+
+      <footer className="public-footer">
+        <div className="footer-main">
+          <div><Brand name={theme.site_name || 'TeachWithJoy'} /><p>{theme.footer_text || 'Personalized learning, thoughtfully scheduled.'}</p></div>
+          <div className="footer-links">
+            <button onClick={() => goTo('about')}>About</button>
+            <button onClick={() => goTo('schedule')}>Scheduling</button>
+            <button onClick={() => goTo('pricing')}>Pricing</button>
+            <button onClick={() => goTo('contact')}>Contact</button>
+          </div>
+        </div>
+        <div className="footer-bottom">{theme.copyright_text || '© 2026 TeachWithJoy. Learn with confidence.'}</div>
+      </footer>
+
+      {mode && <Auth mode={mode} close={() => setMode(null)} change={setMode} />}
+    </div>
+  )
+}
+
+function Home({ content, goTo, auth }: { content: Content; goTo: (page: Page) => void; auth: (mode: AuthMode) => void }) {
+  return <>
+    <section className="hero">
+      <div className="hero-copy">
+        <span className="eyebrow">{content.heroEyebrow}</span>
+        <h1>{content.heroTitle}</h1>
+        <p>{content.heroText}</p>
+        <div className="hero-actions">
+          <button className="btn primary xl" onClick={() => auth('register')}>{content.heroPrimary} <ArrowRight size={15} /></button>
+          <button className="btn secondary xl" onClick={() => goTo('schedule')}>{content.heroSecondary}</button>
+        </div>
+        <div className="hero-trust">
+          <span><ShieldCheck size={14} /> Secure account</span><span><Clock3 size={14} /> Flexible times</span><span><Users size={14} /> Personal guidance</span>
+        </div>
+      </div>
+      <div className="hero-image"><img src={content.heroImage} alt="Learning online" /></div>
+    </section>
+
+    <section className="feature-strip">
+      {(content.features || []).map((item: any, index: number) => <Feature key={index} {...item} />)}
+    </section>
+
+    <section className="content-section two-column-section">
+      <div><span className="eyebrow">{content.whyEyebrow}</span><h2>{content.whyTitle}</h2><p>{content.whyText}</p><button className="text-link" onClick={() => goTo('about')}>Learn more about us <ArrowRight size={14} /></button></div>
+      <div className="info-card-grid">{(content.infoCards || []).map((item: any, index: number) => <InfoCard key={index} {...item} />)}</div>
+    </section>
+
+    <section className="testimonial-section"><div className="quote-card featured-quote"><div className="quote-avatar">A</div><div><strong>“{content.testimonial}”</strong><span>{content.testimonialText}</span><small>— {content.testimonialAuthor}</small></div></div></section>
+
+    <section className="cta-section"><div><span className="eyebrow">{content.ctaEyebrow}</span><h2>{content.ctaTitle}</h2><p>{content.ctaText}</p></div><button className="btn primary xl" onClick={() => auth('register')}>Create your account <ArrowRight size={15} /></button></section>
+  </>
+}
+
+function Interior({ page, content, auth }: { page: Exclude<Page, 'home'>; content: Content; auth: (mode: AuthMode) => void }) {
+  return <section className="interior-page">
+    <div className="page-hero"><span className="eyebrow">{content.eyebrow}</span><h1>{content.title}</h1><p>{content.text}</p></div>
+    <div className="page-body">
+      {page === 'about' && <>
+        <div className="split-panel"><div><h2>{content.bodyTitle}</h2><p>{content.bodyText}</p></div><div className="stat-stack"><Stat label="Lesson style" value="1-on-1" /><Stat label="Booking" value="Self-service" /><Stat label="Focus" value="Progress" /></div></div>
+        <div className="card-grid three-up">{(content.cards || []).map((item: any, i: number) => <InfoCard key={i} {...item} />)}</div>
+      </>}
+      {page === 'schedule' && <div className="schedule-demo"><div className="panel panel-soft"><div className="panel-head"><h3>How it works</h3><CalendarDays size={18} /></div><ol className="steps">{(content.steps || []).map((item: any, i: number) => <li key={i}><b>{i + 1}</b><div><strong>{item.title}</strong><span>{item.text}</span></div></li>)}</ol></div><div className="panel"><span className="eyebrow">READY TO BOOK?</span><h2>Find your next lesson.</h2><p>Sign in to browse teacher availability and reserve a time that works for you.</p><button className="btn primary" onClick={() => auth('register')}>Get started <ArrowRight size={14} /></button></div></div>}
+      {page === 'pricing' && <div className="pricing-grid">{(content.plans || []).map((plan: any, i: number) => <PriceCard key={i} {...plan} onClick={() => auth('register')} />)}</div>}
+      {page === 'contact' && <div className="contact-grid"><div className="panel panel-soft"><span className="eyebrow">LET'S TALK</span><h2>{content.formTitle || 'Tell us what you need.'}</h2><p>{content.contactIntro || 'Use the form to send a message and our team will help with your next step.'}</p><div className="contact-detail"><Mail size={17} /><div><strong>Email</strong><span>{content.email}</span></div></div><div className="contact-detail"><Clock3 size={17} /><div><strong>Support hours</strong><span>{content.supportHours}</span></div></div><div className="contact-detail"><MapPin size={17} /><div><strong>Online</strong><span>{content.onlineText}</span></div></div></div><ContactForm /></div>}
+    </div>
+  </section>
+}
+
+function Feature({ title, text, icon }: any) { return <div className="feature"><div className="feature-icon">{iconMap[icon] || <Sparkles />}</div><div><strong>{title}</strong><span>{text}</span></div></div> }
+function InfoCard({ title, text, icon }: any) { return <div className="info-card"><div className="feature-icon">{iconMap[icon] || <Sparkles />}</div><strong>{title}</strong><p>{text}</p></div> }
+function Stat({ label, value }: { label: string; value: string }) { return <div className="stat-card"><small>{label}</small><strong>{value}</strong></div> }
+function PriceCard({ name, price, detail, items = [], featured, onClick }: any) { return <div className={featured ? 'price-card featured' : 'price-card'}>{featured && <div className="price-badge">MOST POPULAR</div>}<span className="price-name">{name}</span><div className="price-value">{price}<small>{detail}</small></div><div className="price-items">{items.map((item: string, i: number) => <span key={i}><Check size={13} />{item}</span>)}</div><button className="btn primary full" onClick={onClick}>Choose plan</button></div> }
+function Brand({ name }: { name: string }) { return <div className="brand"><div className="brand-icon"><GraduationCap size={20} /></div><strong>{name}</strong></div> }
+
+function ContactForm() {
+  const [sent, setSent] = useState(false)
+  if (sent) return <div className="panel form-success"><div className="success-icon"><Check size={18} /></div><h3>Message ready.</h3><p>Thanks for reaching out. Our team will follow up soon.</p><button className="btn secondary" onClick={() => setSent(false)}>Send another</button></div>
+  return <div className="panel contact-form"><label>Name<input placeholder="Your name" /></label><label>Email<input type="email" placeholder="you@example.com" /></label><label>Message<textarea placeholder="How can we help?" /></label><button className="btn primary" onClick={() => setSent(true)}>Send message <ArrowRight size={14} /></button></div>
+}
+
+function Auth({ mode, close, change }: { mode: AuthMode; close: () => void; change: (mode: AuthMode) => void }) {
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setError(''); setBusy(true)
+    const form = new FormData(event.currentTarget)
+    const email = String(form.get('email') || '').trim()
+    const password = String(form.get('password') || '')
+    const name = String(form.get('name') || '').trim()
+    const result = mode === 'login'
+      ? await supabase.auth.signInWithPassword({ email, password })
+      : await supabase.auth.signUp({ email, password, options: { data: { full_name: name, role: 'student' } } })
+    setBusy(false)
+    if (result.error) { setError(result.error.message); return }
+    if (mode === 'register' && !result.data.session) { setError('Account created. Please confirm your email before signing in.'); return }
+    close()
+  }
+
+  return <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}><div className="auth-modal"><button className="close" onClick={close} aria-label="Close"><X size={17} /></button><div className="brand"><div className="brand-icon"><GraduationCap size={20} /></div><strong>TeachWithJoy</strong></div><h2>{mode === 'login' ? 'Welcome back.' : 'Start learning.'}</h2><p>{mode === 'login' ? 'Sign in to continue to your workspace.' : 'Create a student account and get started.'}</p><form className="stack" onSubmit={submit}>{mode === 'register' && <label>Full name<input name="name" required placeholder="Your full name" /></label>}<label>Email<input name="email" type="email" required placeholder="you@example.com" /></label><label>Password<input name="password" type="password" required minLength={6} placeholder="At least 6 characters" /></label>{error && <div className="error">{error}</div>}<button className="btn primary full" disabled={busy}>{busy ? 'Please wait…' : mode === 'login' ? 'Log in' : 'Create student account'}</button></form><div className="auth-switch">{mode === 'login' ? <>New here? <button onClick={() => change('register')}>Create an account</button></> : <>Already registered? <button onClick={() => change('login')}>Log in</button></>}</div></div></div>
+}
+
+function getInitialPage(): Page {
+  const hash = window.location.hash.replace('#', '')
+  return ['home', 'about', 'schedule', 'pricing', 'contact'].includes(hash) ? hash as Page : 'home'
+}
