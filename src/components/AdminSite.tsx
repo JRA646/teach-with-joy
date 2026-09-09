@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import AdminEditor from './AdminEditor'
 import AdminTheme from './AdminTheme'
 import AdminMessages from './AdminMessages'
+import './admin-enhancements.css'
 
 type Page = 'home' | 'about' | 'schedule' | 'pricing' | 'contact'
 type Section = Page | 'overview' | 'theme' | 'messages'
