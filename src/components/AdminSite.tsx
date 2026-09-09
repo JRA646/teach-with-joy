@@ -5,6 +5,8 @@ import AdminEditor from './AdminEditor'
 import AdminTheme from './AdminTheme'
 
 type Page = 'home' | 'about' | 'schedule' | 'pricing' | 'contact'
+type Section = Page | 'overview' | 'theme'
+
 const labels: Record<Page, string> = {
   home: 'Home',
   about: 'About',
@@ -13,17 +15,21 @@ const labels: Record<Page, string> = {
   contact: 'Contact',
 }
 
-type AdminCheck = { user_id: string } | null
-
 export default function AdminSite() {
   const [session, setSession] = useState<any>(null)
   const [authorized, setAuthorized] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState<Page | 'overview' | 'theme'>('overview')
+  const [page, setPage] = useState<Section>('overview')
   const [content, setContent] = useState<Record<string, any>>({})
   const [theme, setTheme] = useState<any>({})
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  async function checkAdmin() {
+    const { data, error: rpcError } = await supabase.rpc('is_admin')
+    if (rpcError) return { authorized: false, error: rpcError.message }
+    return { authorized: data === true, error: '' }
+  }
 
   useEffect(() => {
     let mounted = true
@@ -47,29 +53,22 @@ export default function AdminSite() {
         return
       }
 
-      const { data: admin, error: adminError } = await supabase
-        .from('admin_users')
-        .select('user_id')
-        .eq('user_id', currentSession.user.id)
-        .maybeSingle()
-
+      const admin = await checkAdmin()
       if (!mounted) return
 
-      if (adminError) {
-        setError(adminError.message)
+      if (admin.error) {
+        setError(admin.error)
         setLoading(false)
         return
       }
 
-      const isAuthorized = Boolean(admin as AdminCheck)
-      setAuthorized(isAuthorized)
-
-      if (!isAuthorized) {
+      if (!admin.authorized) {
         setError('This account is not authorized to access the admin area.')
         setLoading(false)
         return
       }
 
+      setAuthorized(true)
       await load()
       if (mounted) setLoading(false)
     }
@@ -115,19 +114,14 @@ export default function AdminSite() {
       return
     }
 
-    const { data: admin, error: adminError } = await supabase
-      .from('admin_users')
-      .select('user_id')
-      .eq('user_id', result.data.user.id)
-      .maybeSingle()
-
-    if (adminError) {
+    const admin = await checkAdmin()
+    if (admin.error) {
       await supabase.auth.signOut()
-      setError(adminError.message)
+      setError(admin.error)
       return
     }
 
-    if (!admin) {
+    if (!admin.authorized) {
       await supabase.auth.signOut()
       setError('This account is not authorized to access the admin area.')
       return
@@ -147,7 +141,7 @@ export default function AdminSite() {
       ? { ...theme, id: 1, updated_by: session?.user?.id }
       : {
           page,
-          content: content[page as string] || {},
+          content: content[page] || {},
           updated_by: session?.user?.id,
           updated_at: new Date().toISOString(),
         }
@@ -169,6 +163,12 @@ export default function AdminSite() {
   async function signOut() {
     await supabase.auth.signOut()
     window.location.href = '/'
+  }
+
+  function getTitle(section: Section) {
+    if (section === 'overview') return 'Overview'
+    if (section === 'theme') return 'Color Theme'
+    return labels[section]
   }
 
   if (loading) return <div className="admin-loader">Loading TeachWithJoy Admin...</div>
@@ -205,7 +205,7 @@ export default function AdminSite() {
         <header className="admin-topbar">
           <div>
             <span className="admin-kicker">TEACHWITHJOY CMS</span>
-            <h2>{page === 'overview' ? 'Overview' : page === 'theme' ? 'Color Theme' : labels[page]}</h2>
+            <h2>{getTitle(page)}</h2>
           </div>
           <button className="admin-view-site" onClick={() => (window.location.href = '/')}>View site</button>
         </header>
@@ -259,7 +259,7 @@ function Nav({ children, active, onClick }: { children: React.ReactNode; active:
   )
 }
 
-function Overview({ go }: { go: (page: Page | 'theme') => void }) {
+function Overview({ go }: { go: (page: Section) => void }) {
   return (
     <div className="admin-overview">
       <section className="admin-welcome">
