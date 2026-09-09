@@ -384,7 +384,6 @@ function Auth({ mode, close, change }: AuthProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<'student' | 'teacher'>('student')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -399,13 +398,13 @@ function Auth({ mode, close, change }: AuthProps) {
         : await supabase.auth.signUp({
             email,
             password,
-            options: { data: { full_name: name, role } },
+            options: { data: { full_name: name, role: 'student' } },
           })
 
       if (result.error) throw result.error
 
       if (mode === 'register' && !result.data.session) {
-        setError('Account created. Check your email to confirm your address, then log in.')
+        setError('Account created, but email confirmation is enabled in Supabase. Disable Confirm Email to allow automatic dashboard access.')
         return
       }
 
@@ -423,12 +422,11 @@ function Auth({ mode, close, change }: AuthProps) {
         <button className="icon-btn close" onClick={close} aria-label="Close authentication form"><X size={18} /></button>
         <Brand />
         <h2 id="auth-title">{mode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
-        <p>{mode === 'login' ? 'Log in to continue to your TeachWithJoy workspace.' : 'Choose a role and start learning or teaching.'}</p>
+        <p>{mode === 'login' ? 'Log in to continue to your TeachWithJoy workspace.' : 'Create your student account and start learning with TeachWithJoy.'}</p>
 
         <form className="stack" onSubmit={submit}>
           {mode === 'register' && <>
             <label>Full name<input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Joy Teacher" autoComplete="name" /></label>
-            <label>Role<select value={role} onChange={(event) => setRole(event.target.value as 'student' | 'teacher')}><option value="student">Student</option><option value="teacher">Teacher</option></select></label>
           </>}
           <label>Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" autoComplete="email" /></label>
           <label>Password<input required minLength={6} type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} /></label>
