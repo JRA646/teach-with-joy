@@ -1,10 +1,129 @@
-import {useEffect,useRef,useState} from 'react'
+import { useEffect, useRef, useState } from 'react'
 import PublicSite from './PublicSite'
-import {supabase} from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 
-export default function ManagedPublicSite(){
- const [data,setData]=useState<any>({});const [theme,setTheme]=useState<any>({});const root=useRef<HTMLDivElement>(null)
- useEffect(()=>{Promise.all([supabase.from('site_content').select('page,content'),supabase.from('site_theme').select('*').eq('id',1).maybeSingle()]).then(([c,t])=>{const n:any={};(c.data||[]).forEach((r:any)=>n[r.page]=r.content);setData(n);if(t.data)setTheme(t.data)})},[])
- useEffect(()=>{const r=document.documentElement;Object.entries(theme).forEach(([k,v])=>{if(k.endsWith('_color'))r.style.setProperty('--twj-'+k.replace('_color','').replace('_','-'),String(v))});const apply=()=>{const c=data;const q=(s:string)=>root.current?.querySelector(s) as HTMLElement|null;const set=(s:string,v:any)=>{const x=q(s);if(x&&v)x.textContent=String(v)};if(q('.hero')){set('.hero .eyebrow',c.home?.heroEyebrow);set('.hero-copy > p',c.home?.heroText);set('.hero h1',c.home?.heroTitle);const img=q('.hero-image img') as HTMLImageElement|null;if(img&&c.home?.heroImage)img.src=c.home.heroImage;set('.content-section .eyebrow',c.home?.whyEyebrow);set('.content-section h2',c.home?.whyTitle);set('.content-section p',c.home?.whyText);set('.testimonial-section strong',c.home?.testimonial);set('.testimonial-section span',c.home?.testimonialText);set('.testimonial-section small',c.home?.testimonialAuthor);set('.cta-section .eyebrow',c.home?.ctaEyebrow);set('.cta-section h2',c.home?.ctaTitle);set('.cta-section p',c.home?.ctaText)}else{set('.page-hero .eyebrow',c[location.hash.replace('#','')]?.eyebrow);set('.page-hero h1',c[location.hash.replace('#','')]?.title);set('.page-hero p',c[location.hash.replace('#','')]?.text)}if(q('.contact-detail')){const x=c.contact||{};const spans=root.current?.querySelectorAll('.contact-detail span');if(spans&&spans.length>2){spans[0].textContent=x.email||spans[0].textContent;spans[1].textContent=x.supportHours||spans[1].textContent;spans[2].textContent=x.onlineText||spans[2].textContent}}};apply();const o=new MutationObserver(()=>{o.disconnect();apply();o.observe(root.current!,{childList:true,subtree:true})});if(root.current)o.observe(root.current,{childList:true,subtree:true});return()=>o.disconnect()},[data,theme])
- return <div ref={root}><PublicSite/></div>
+export default function ManagedPublicSite() {
+  const [data, setData] = useState<Record<string, any>>({})
+  const [theme, setTheme] = useState<any>({})
+  const root = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let mounted = true
+
+    async function load() {
+      const [contentResult, themeResult] = await Promise.all([
+        supabase.from('site_content').select('page,content'),
+        supabase.from('site_theme').select('*').eq('id', 1).maybeSingle(),
+      ])
+
+      if (!mounted) return
+
+      const next: Record<string, any> = {}
+      ;(contentResult.data || []).forEach((row: any) => {
+        next[row.page] = row.content
+      })
+      setData(next)
+      if (themeResult.data) setTheme(themeResult.data)
+    }
+
+    load()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const html = document.documentElement
+    Object.entries(theme).forEach(([key, value]) => {
+      if (key.endsWith('_color')) {
+        html.style.setProperty(`--twj-${key.replace('_color', '').replace('_', '-')}`, String(value))
+      }
+    })
+  }, [theme])
+
+  useEffect(() => {
+    const container = root.current
+    if (!container) return
+
+    const getPage = () => {
+      const hash = window.location.hash.replace('#', '')
+      if (hash && data[hash]) return hash
+
+      const active = container.querySelector('.nav-link.active')?.textContent?.trim().toLowerCase()
+      if (active === 'about') return 'about'
+      if (active === 'scheduling') return 'schedule'
+      if (active === 'pricing') return 'pricing'
+      if (active === 'contact') return 'contact'
+      return 'home'
+    }
+
+    const setText = (selector: string, value: any) => {
+      const element = container.querySelector(selector) as HTMLElement | null
+      if (element && value !== undefined && value !== null && String(value).trim() !== '') {
+        element.textContent = String(value)
+      }
+    }
+
+    const apply = () => {
+      const currentPage = getPage()
+      const current = data[currentPage]
+      if (!current) return
+
+      if (currentPage === 'home') {
+        setText('.hero .eyebrow', current.heroEyebrow)
+        setText('.hero h1', current.heroTitle)
+        setText('.hero-copy > p', current.heroText)
+        setText('.content-section .eyebrow', current.whyEyebrow)
+        setText('.content-section h2', current.whyTitle)
+        setText('.content-section p', current.whyText)
+        setText('.testimonial-section strong', current.testimonial)
+        setText('.testimonial-section span', current.testimonialText)
+        setText('.testimonial-section small', current.testimonialAuthor)
+        setText('.cta-section .eyebrow', current.ctaEyebrow)
+        setText('.cta-section h2', current.ctaTitle)
+        setText('.cta-section p', current.ctaText)
+
+        const image = container.querySelector('.hero-image img') as HTMLImageElement | null
+        if (image && current.heroImage) image.src = String(current.heroImage)
+      } else {
+        setText('.page-hero .eyebrow', current.eyebrow)
+        setText('.page-hero h1', current.title)
+        setText('.page-hero p', current.text)
+
+        if (currentPage === 'about') {
+          setText('.page-body h2', current.bodyTitle)
+          setText('.page-body p', current.bodyText)
+        }
+      }
+
+      if (currentPage === 'contact') {
+        const contact = data.contact || {}
+        const spans = container.querySelectorAll('.contact-detail span')
+        if (spans[0] && contact.email) spans[0].textContent = String(contact.email)
+        if (spans[1] && contact.supportHours) spans[1].textContent = String(contact.supportHours)
+        if (spans[2] && contact.onlineText) spans[2].textContent = String(contact.onlineText)
+      }
+    }
+
+    const handleNavigation = () => window.setTimeout(apply, 0)
+    container.addEventListener('click', handleNavigation)
+    window.addEventListener('hashchange', handleNavigation)
+
+    const observer = new MutationObserver(() => {
+      observer.disconnect()
+      apply()
+      observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
+    })
+
+    observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
+    apply()
+
+    return () => {
+      container.removeEventListener('click', handleNavigation)
+      window.removeEventListener('hashchange', handleNavigation)
+      observer.disconnect()
+    }
+  }, [data])
+
+  return <div ref={root}><PublicSite /></div>
 }
