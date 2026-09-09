@@ -7,12 +7,14 @@ import AdminTheme from './AdminTheme'
 type Page = 'home' | 'about' | 'schedule' | 'pricing' | 'contact'
 type Section = Page | 'overview' | 'theme'
 
-const labels: Record<Page, string> = {
+const labels: Record<Section, string> = {
+  overview: 'Overview',
   home: 'Home',
   about: 'About',
   schedule: 'Scheduling',
   pricing: 'Pricing',
   contact: 'Contact',
+  theme: 'Color Theme',
 }
 
 export default function AdminSite() {
@@ -25,10 +27,15 @@ export default function AdminSite() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  async function checkAdmin() {
-    const { data, error: rpcError } = await supabase.rpc('is_admin')
-    if (rpcError) return { authorized: false, error: rpcError.message }
-    return { authorized: data === true, error: '' }
+  async function checkAdmin(userId: string) {
+    const { data, error: adminError } = await supabase
+      .from('admin_users')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (adminError) return { authorized: false, error: adminError.message }
+    return { authorized: Boolean(data?.user_id), error: '' }
   }
 
   useEffect(() => {
@@ -53,7 +60,7 @@ export default function AdminSite() {
         return
       }
 
-      const admin = await checkAdmin()
+      const admin = await checkAdmin(currentSession.user.id)
       if (!mounted) return
 
       if (admin.error) {
@@ -109,14 +116,14 @@ export default function AdminSite() {
     const password = String(form.get('password') || '')
 
     const result = await supabase.auth.signInWithPassword({ email, password })
-    if (result.error) {
-      setError(result.error.message)
+    if (result.error || !result.data.user) {
+      setError(result.error?.message || 'Unable to sign in.')
       return
     }
 
-    const admin = await checkAdmin()
+    const userId = result.data.user.id
+    const admin = await checkAdmin(userId)
     if (admin.error) {
-      await supabase.auth.signOut()
       setError(admin.error)
       return
     }
@@ -166,8 +173,6 @@ export default function AdminSite() {
   }
 
   function getTitle(section: Section) {
-    if (section === 'overview') return 'Overview'
-    if (section === 'theme') return 'Color Theme'
     return labels[section]
   }
 
@@ -186,7 +191,7 @@ export default function AdminSite() {
           <LayoutDashboard /> Overview
         </Nav>
 
-        {(Object.keys(labels) as Page[]).map((item) => (
+        {(Object.keys(labels) as Section[]).filter((item): item is Page => item !== 'overview' && item !== 'theme').map((item) => (
           <Nav key={item} active={page === item} onClick={() => setPage(item)}>
             {labels[item]}
           </Nav>
@@ -271,7 +276,7 @@ function Overview({ go }: { go: (page: Section) => void }) {
         <Palette size={28} />
       </section>
       <div className="admin-card-grid">
-        {(Object.keys(labels) as Page[]).map((item) => (
+        {(Object.keys(labels) as Section[]).filter((item): item is Page => item !== 'overview' && item !== 'theme').map((item) => (
           <button className="admin-content-card" key={item} onClick={() => go(item)}>
             <span>{labels[item]}</span>
             <strong>Edit content</strong>
