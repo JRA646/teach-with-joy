@@ -27,62 +27,69 @@ export default function AdminSite() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  async function checkAdmin(userId: string) {
-    const { data, error: adminError } = await supabase
-      .from('admin_users')
-      .select('user_id')
-      .eq('user_id', userId)
-      .maybeSingle()
+  async function checkAdmin() {
+    const { data, error: adminError } = await supabase.rpc('is_admin')
 
-    if (adminError) return { authorized: false, error: adminError.message }
-    return { authorized: Boolean(data?.user_id), error: '' }
+    if (adminError) {
+      return { authorized: false, error: adminError.message }
+    }
+
+    return { authorized: data === true, error: '' }
+  }
+
+  async function initialize() {
+    setError('')
+    const { data, error: sessionError } = await supabase.auth.getSession()
+
+    if (sessionError) {
+      setError(sessionError.message)
+      setLoading(false)
+      return
+    }
+
+    const currentSession = data.session
+    setSession(currentSession)
+
+    if (!currentSession) {
+      setAuthorized(false)
+      setLoading(false)
+      return
+    }
+
+    const admin = await checkAdmin()
+
+    if (admin.error) {
+      setError(admin.error)
+      setAuthorized(false)
+      setLoading(false)
+      return
+    }
+
+    if (!admin.authorized) {
+      setError('This account is not authorized to access the admin area.')
+      setAuthorized(false)
+      setLoading(false)
+      return
+    }
+
+    setAuthorized(true)
+    await load()
+    setLoading(false)
   }
 
   useEffect(() => {
     let mounted = true
 
-    async function initialize() {
-      setError('')
-      const { data, error: sessionError } = await supabase.auth.getSession()
+    void initialize()
+
+    const { data } = supabase.auth.onAuthStateChange(async () => {
       if (!mounted) return
+      await initialize()
+    })
 
-      if (sessionError) {
-        setError(sessionError.message)
-        setLoading(false)
-        return
-      }
-
-      const currentSession = data.session
-      setSession(currentSession)
-
-      if (!currentSession) {
-        setLoading(false)
-        return
-      }
-
-      const admin = await checkAdmin(currentSession.user.id)
-      if (!mounted) return
-
-      if (admin.error) {
-        setError(admin.error)
-        setLoading(false)
-        return
-      }
-
-      if (!admin.authorized) {
-        setError('This account is not authorized to access the admin area.')
-        setLoading(false)
-        return
-      }
-
-      setAuthorized(true)
-      await load()
-      if (mounted) setLoading(false)
-    }
-
-    initialize()
     return () => {
       mounted = false
+      data.subscription.unsubscribe()
     }
   }, [])
 
@@ -121,10 +128,13 @@ export default function AdminSite() {
       return
     }
 
-    const userId = result.data.user.id
-    const admin = await checkAdmin(userId)
+    // Ensure the newly issued access token is available before the admin RPC runs.
+    await supabase.auth.getSession()
+
+    const admin = await checkAdmin()
     if (admin.error) {
       setError(admin.error)
+      await supabase.auth.signOut()
       return
     }
 
@@ -136,6 +146,7 @@ export default function AdminSite() {
 
     setSession(result.data.session)
     setAuthorized(true)
+    setLoading(false)
     await load()
   }
 
@@ -172,7 +183,7 @@ export default function AdminSite() {
     window.location.href = '/'
   }
 
-  function getTitle(section: Section) {
+  function getTitle(section: Section): string {
     return labels[section]
   }
 
@@ -191,11 +202,13 @@ export default function AdminSite() {
           <LayoutDashboard /> Overview
         </Nav>
 
-        {(Object.keys(labels) as Section[]).filter((item): item is Page => item !== 'overview' && item !== 'theme').map((item) => (
-          <Nav key={item} active={page === item} onClick={() => setPage(item)}>
-            {labels[item]}
-          </Nav>
-        ))}
+        {(Object.keys(labels) as Section[])
+          .filter((item): item is Page => item !== 'overview' && item !== 'theme')
+          .map((item) => (
+            <Nav key={item} active={page === item} onClick={() => setPage(item)}>
+              {labels[item]}
+            </Nav>
+          ))}
 
         <Nav active={page === 'theme'} onClick={() => setPage('theme')}>
           <Palette /> Color Theme
@@ -276,12 +289,14 @@ function Overview({ go }: { go: (page: Section) => void }) {
         <Palette size={28} />
       </section>
       <div className="admin-card-grid">
-        {(Object.keys(labels) as Section[]).filter((item): item is Page => item !== 'overview' && item !== 'theme').map((item) => (
-          <button className="admin-content-card" key={item} onClick={() => go(item)}>
-            <span>{labels[item]}</span>
-            <strong>Edit content</strong>
-          </button>
-        ))}
+        {(Object.keys(labels) as Section[])
+          .filter((item): item is Page => item !== 'overview' && item !== 'theme')
+          .map((item) => (
+            <button className="admin-content-card" key={item} onClick={() => go(item)}>
+              <span>{labels[item]}</span>
+              <strong>Edit content</strong>
+            </button>
+          ))}
         <button className="admin-content-card" onClick={() => go('theme')}>
           <span>Brand</span>
           <strong>Modify color theme</strong>
