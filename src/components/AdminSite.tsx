@@ -88,6 +88,10 @@ export default function AdminSite() {
       : { page, content: content[page] || {}, updated_by: session?.user?.id, updated_at: new Date().toISOString() }
     const result = await supabase.from(isTheme ? 'site_theme' : 'site_content').upsert(payload, { onConflict: isTheme ? 'id' : 'page' })
     if (result.error) { setError(result.error.message); return }
+    if (isTheme) {
+      try { localStorage.setItem('teachwithjoy-public-theme', JSON.stringify(theme)) } catch {}
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme.primary_color || defaultTheme.primary_color)
+    }
     setSuccess('Saved successfully.')
     await load()
     window.setTimeout(() => setSuccess(''), 2500)
