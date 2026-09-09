@@ -3,8 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#6d4ce6" />
+    <meta name="theme-color" content="#ff7f32" />
     <title>TeachWithJoy</title>
+    <script>
+      (() => {
+        try {
+          const raw = localStorage.getItem('teachwithjoy-public-theme')
+          if (!raw) return
+          const theme = JSON.parse(raw)
+          const map = {
+            primary_color: '--twj-primary',
+            primary_dark: '--twj-primary-dark',
+            accent_color: '--twj-accent',
+            background_color: '--twj-bg',
+            surface_color: '--twj-surface',
+            text_color: '--twj-text',
+            muted_color: '--twj-muted'
+          }
+          for (const [key, variable] of Object.entries(map)) {
+            if (typeof theme[key] === 'string' && theme[key]) {
+              document.documentElement.style.setProperty(variable, theme[key])
+            }
+          }
+        } catch (_) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
