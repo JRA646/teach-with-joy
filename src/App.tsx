@@ -6,6 +6,7 @@ import Workspace from './components/Workspace'
 import ProgramWorkspace from './components/ProgramWorkspace'
 import TeacherPrograms from './components/TeacherPrograms'
 import TeacherProgramShortcut from './components/TeacherProgramShortcut'
+import StudentProgramShortcut from './components/StudentProgramShortcut'
 import ProgramPreferences from './components/ProgramPreferences'
 import './program.css'
 import './teacher-program-shortcut.css'
@@ -40,5 +41,5 @@ export default function App() {
       ? <TeacherPrograms profile={profile} />
       : <div className="program-route"><ProgramWorkspace profile={profile} /><ProgramPreferences profile={profile} /></div>
   }
-  return <div className="workspace-route"><Workspace profile={profile} />{profile.role === 'teacher' && <TeacherProgramShortcut />}</div>
+  return <div className="workspace-route"><Workspace profile={profile} />{profile.role === 'teacher' ? <TeacherProgramShortcut /> : <StudentProgramShortcut />}</div>
 }
