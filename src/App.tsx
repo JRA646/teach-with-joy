@@ -40,7 +40,7 @@ export default function App() {
   if (!session || !profile) return <ManagedPublicSite />
   if (isProgramRoute) {
     return profile.role === 'teacher'
-      ? <div className="program-route-shell"><Workspace profile={profile} /><div className="program-route-overlay"><TeacherPrograms profile={profile} /></div></div>
+      ? <div className="program-route-shell"><Workspace profile={profile} /><div className="program-route-overlay"><TeacherPrograms profile={profile} /></div><TeacherProgramShortcut /></div>
       : <div className="program-route"><ProgramWorkspace profile={profile} /><ProgramPreferences profile={profile} /></div>
   }
   return <div className="workspace-route"><Workspace profile={profile} />{profile.role === 'teacher' ? <TeacherProgramShortcut /> : <StudentProgramShortcut />}</div>
