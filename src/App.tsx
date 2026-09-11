@@ -3,12 +3,14 @@ import { supabase } from './lib/supabase'
 import ManagedPublicSite from './components/ManagedPublicSite'
 import AdminSite from './components/AdminSite'
 import Workspace from './components/Workspace'
+import ProgramWorkspace from './components/ProgramWorkspace'
 
 export default function App() {
   const [session, setSession] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const isAdminRoute = window.location.pathname.startsWith('/admin')
+  const isProgramRoute = window.location.pathname === '/program'
 
   async function loadProfile(id: string) {
     const { data } = await supabase.from('profiles').select('*').eq('id', id).single()
@@ -40,5 +42,6 @@ export default function App() {
   if (isAdminRoute) return <AdminSite />
   if (loading) return <div className="screen-loader">Loading TeachWithJoy...</div>
   if (!session || !profile) return <ManagedPublicSite />
+  if (isProgramRoute) return <ProgramWorkspace profile={profile} />
   return <Workspace profile={profile} refresh={() => loadProfile(profile.id)} />
 }
