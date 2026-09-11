@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --color-brand-50: #f7f4ff;
+  --color-brand-100: #eee8ff;
+  --color-brand-500: #6849d7;
+  --color-brand-600: #5d3bc5;
+  --color-brand-700: #5737c1;
+  --color-action-500: #ff7f32;
+  --color-action-600: #e96820;
+}
+
+@layer base {
+  html { @apply scroll-smooth; }
+  body { @apply m-0 bg-slate-50 font-sans text-slate-900 antialiased; }
+  button, input, select, textarea { @apply font-inherit; }
+  button { @apply cursor-pointer; }
+  button:disabled { @apply cursor-not-allowed; }
+  ::selection { @apply bg-brand-100 text-brand-700; }
+}
+
+@layer components {
+  .tw-page-shell { @apply min-h-screen bg-slate-50 text-slate-900; }
+  .tw-surface { @apply rounded-2xl border border-slate-200 bg-white shadow-sm; }
+  .tw-surface-soft { @apply rounded-2xl border border-slate-200 bg-slate-50; }
+  .tw-section-title { @apply text-xl font-bold tracking-tight text-slate-950 md:text-2xl; }
+  .tw-section-copy { @apply text-sm leading-6 text-slate-500; }
+  .tw-label { @apply text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500; }
+  .tw-input { @apply h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100; }
+  .tw-select { @apply h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100; }
+  .tw-textarea { @apply min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100; }
+  .tw-btn { @apply inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition duration-200; }
+  .tw-btn-primary { @apply border-brand-500 bg-brand-500 text-white shadow-sm hover:-translate-y-0.5 hover:bg-brand-600; }
+  .tw-btn-secondary { @apply border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-brand-200 hover:text-brand-600; }
+  .tw-btn-action { @apply border-action-500 bg-action-500 text-white shadow-sm hover:-translate-y-0.5 hover:bg-action-600; }
+  .tw-btn-danger { @apply border-red-200 bg-red-50 text-red-600 hover:bg-red-100; }
+  .tw-badge { @apply inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold; }
+  .tw-badge-success { @apply border-emerald-200 bg-emerald-50 text-emerald-700; }
+  .tw-badge-warning { @apply border-amber-200 bg-amber-50 text-amber-700; }
+  .tw-badge-danger { @apply border-red-200 bg-red-50 text-red-700; }
+  .tw-badge-info { @apply border-blue-200 bg-blue-50 text-blue-700; }
+  .tw-divider { @apply border-t border-slate-200; }
+
+  /* Shared workspace primitives: Tailwind becomes the common visual layer for teacher/student pages. */
+  .app-shell { @apply min-h-screen bg-slate-50 text-slate-900; }
+  .app-header { @apply sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur; }
+  .app-body { @apply min-h-[calc(100vh-60px)] bg-slate-50; }
+  .sidebar { @apply border-r border-slate-200 bg-white; }
+  .main-content { @apply bg-slate-50; }
+  .nav-item { @apply rounded-xl text-slate-600 transition hover:bg-slate-50 hover:text-brand-600; }
+  .nav-item.active { @apply bg-brand-50 text-brand-600 shadow-none; }
+  .panel, .stat { @apply rounded-2xl border-slate-200 bg-white shadow-sm; }
+  .panel-head h3, .panel h3 { @apply font-bold text-slate-900; }
+  .stat { @apply transition hover:-translate-y-0.5 hover:shadow-md; }
+  .btn { @apply rounded-xl border border-slate-200 bg-white text-slate-700 shadow-none transition duration-200; }
+  .btn.primary { @apply border-brand-500 bg-brand-500 text-white shadow-sm hover:bg-brand-600; }
+  .btn.secondary { @apply border-slate-200 bg-white text-brand-600 hover:border-brand-200 hover:bg-brand-50; }
+
+  /* Public-site primitives. Existing page-specific CSS remains intact; these rules provide the shared Tailwind system. */
+  .public-site { @apply min-h-screen bg-slate-50 text-slate-900; }
+  .public-header { @apply border-b border-slate-200 bg-white/95 backdrop-blur; }
+  .hero { @apply border-b border-slate-200; }
+  .content-section, .feature-strip, .panel-soft, .price-card, .quote-card, .cta-section { @apply shadow-sm; }
+  .content-section, .feature-strip, .price-card, .panel-soft { @apply border-slate-200; }
+  .btn.xl { @apply rounded-xl; }
+
+  /* Admin system */
+  .admin-shell { @apply min-h-screen bg-slate-50 text-slate-900; }
+  .admin-sidebar { @apply border-r border-slate-200 bg-white; }
+  .admin-main { @apply bg-slate-50; }
+  .admin-card-grid > * { @apply rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md; }
+  .admin-login-card { @apply rounded-3xl border border-slate-200 bg-white shadow-xl; }
+  .admin-btn.primary { @apply rounded-xl bg-brand-500 text-white hover:bg-brand-600; }
+  .admin-error { @apply rounded-xl border border-red-200 bg-red-50 text-red-700; }
+  .admin-success { @apply rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700; }
+
+  /* Tailwind-first form controls for every module. */
+  .app-shell input, .app-shell select, .app-shell textarea,
+  .admin-shell input, .admin-shell select, .admin-shell textarea,
+  .public-site input, .public-site select, .public-site textarea { @apply rounded-xl border border-slate-200 bg-white outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100; }
+}
+
+@layer utilities {
+  .font-inherit { font: inherit; }
+}
