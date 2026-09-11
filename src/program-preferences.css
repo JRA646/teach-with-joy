@@ -1,0 +1,39 @@
+.program-route {
+  min-height: 100vh;
+}
+
+.program-preferences {
+  margin-top: 20px;
+}
+
+.program-preference-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.program-preference-row {
+  display: grid;
+  grid-template-columns: 24px minmax(150px, 1fr) 140px auto 140px;
+  align-items: center;
+  gap: 10px;
+}
+
+.program-preference-row svg {
+  color: #7250df;
+}
+
+.program-preference-row input,
+.program-preference-row select {
+  min-width: 0;
+}
+
+@media (max-width: 700px) {
+  .program-preference-row {
+    grid-template-columns: 24px 1fr 1fr;
+  }
+
+  .program-preference-row span {
+    display: none;
+  }
+}
