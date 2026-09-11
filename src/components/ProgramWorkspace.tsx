@@ -8,9 +8,9 @@ const terminalStatuses = ['completed', 'student_absent', 'teacher_absent', 'teac
 const statusLabel = (status: string) => status.replaceAll('_', ' ').replace(/\b\w/g, x => x.toUpperCase())
 const statusClass = (status: string) => status === 'completed' ? 'program-status success' : ['teacher_absent','student_absent','student_cancelled','teacher_cancelled'].includes(status) ? 'program-status warning' : ['holiday','postponed'].includes(status) ? 'program-status info' : 'program-status'
 
-export default function ProgramWorkspace({ profile }: { profile: any }) {
+export default function ProgramWorkspace({ profile, enrollmentId }: { profile: any; enrollmentId?: string }) {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
-  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState('')
+  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState(enrollmentId || '')
   const [sessions, setSessions] = useState<Session[]>([])
   const [teacher, setTeacher] = useState<any>(null)
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
@@ -23,7 +23,11 @@ export default function ProgramWorkspace({ profile }: { profile: any }) {
     const { data, error: e } = await supabase.from('enrollments').select('*').eq(field, profile.id).in('status', ['active','completed']).order('start_date', { ascending: false })
     if (e) { setError(e.message); setLoading(false); return }
     setEnrollments(data || [])
-    if (!selectedEnrollmentId && data?.[0]) setSelectedEnrollmentId(data[0].id)
+    setSelectedEnrollmentId(current => {
+      if (enrollmentId && data?.some(x => x.id === enrollmentId)) return enrollmentId
+      if (current && data?.some(x => x.id === current)) return current
+      return data?.[0]?.id || ''
+    })
     if (!data?.length) setLoading(false)
   }
 
@@ -39,7 +43,7 @@ export default function ProgramWorkspace({ profile }: { profile: any }) {
     setLoading(false)
   }
 
-  useEffect(() => { void loadEnrollments() }, [profile.id, profile.role])
+  useEffect(() => { void loadEnrollments() }, [profile.id, profile.role, enrollmentId])
   useEffect(() => { void loadProgram() }, [selectedEnrollmentId])
   useEffect(() => {
     if (!selectedEnrollmentId) return
@@ -56,12 +60,12 @@ export default function ProgramWorkspace({ profile }: { profile: any }) {
   const months = useMemo(() => { const groups: Record<string, Session[]> = {}; sessions.forEach(s => { const key = s.scheduled_start ? new Date(s.scheduled_start).toLocaleString('en-US',{month:'long',year:'numeric'}) : 'Needs scheduling'; (groups[key] ||= []).push(s) }); return Object.entries(groups) }, [sessions])
 
   if (loading) return <div className="screen-loader">Loading your program...</div>
-  if (!enrollments.length) return <div className="page"><section className="panel"><div className="empty-state"><GraduationCap size={30}/><h3>No active program yet</h3><p>Your enrollment and class schedule will appear here once an administrator creates your program.</p></div></section></div>
+  if (!enrollments.length) return <div className="program-empty"><GraduationCap size={30}/><h3>{profile.role === 'teacher' ? 'No program assigned yet' : 'No active program yet'}</h3><p>{profile.role === 'teacher' ? 'Create an enrollment for one of your students to generate the session ledger.' : 'Your enrollment and class schedule will appear here once your teacher creates your program.'}</p></div>
 
-  return <div className="page">
-    <div className="page-title"><div><span className="eyebrow">ENROLLMENT</span><h1>My learning program</h1><p>Program calendar, attendance, make-ups, postponements and lesson records.</p></div><div className="program-toolbar"><select value={selectedEnrollmentId} onChange={e=>setSelectedEnrollmentId(e.target.value)}>{enrollments.map(e=><option key={e.id} value={e.id}>{e.contract_type === 'three_month' ? '3-Month' : 'Monthly'} · {e.start_date}</option>)}</select><button className="btn" onClick={()=>{void loadEnrollments();void loadProgram()}}><RefreshCw size={16}/>Refresh</button></div></div>
+  return <div className="program-workspace">
+    <div className="program-title-row"><div><span className="eyebrow">{profile.role === 'teacher' ? 'SELECTED PROGRAM' : 'ENROLLMENT'}</span><h2>{profile.role === 'teacher' ? 'Program session management' : 'My learning program'}</h2><p>{profile.role === 'teacher' ? 'Schedule sessions, record attendance, and track student progress.' : 'Program calendar, attendance, make-ups, postponements and lesson records.'}</p></div><div className="program-toolbar"><select value={selectedEnrollmentId} onChange={e=>setSelectedEnrollmentId(e.target.value)}>{enrollments.map(e=><option key={e.id} value={e.id}>{e.contract_type === 'three_month' ? '3-Month' : 'Monthly'} · {e.start_date}</option>)}</select><button className="btn" onClick={()=>{void loadEnrollments();void loadProgram()}}><RefreshCw size={16}/>Refresh</button></div></div>
     <div className="program-summary"><div className="program-hero panel"><div><span className="eyebrow">{enrollment?.contract_type === 'three_month' ? '3-MONTH PROGRAM' : 'MONTHLY PROGRAM'}</span><h2>{profile.role === 'teacher' ? 'Assigned student program' : 'Your learning program'}</h2><p>{teacher ? <>Teacher: <strong>{teacher.full_name}</strong></> : 'Teacher not assigned yet'}</p></div><div className="program-progress"><strong>{completed}/{enrollment?.total_sessions}</strong><span>completed</span></div></div><div className="stat-grid program-stats"><div className="stat-card"><div><strong>{enrollment?.total_sessions}</strong><small>Total sessions</small></div></div><div className="stat-card"><div><strong>{completed}</strong><small>Completed</small></div></div><div className="stat-card"><div><strong>{remaining}</strong><small>Remaining</small></div></div><div className="stat-card"><div><strong>{postponementsRemaining}</strong><small>Postponements left</small></div></div></div></div>
-    <section className="panel program-next"><div><span className="eyebrow">NEXT CLASS</span><h3>{upcoming ? `Session ${upcoming.session_number}` : 'No upcoming class'}</h3><p>{upcoming ? `${new Date(upcoming.scheduled_start).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})} · ${new Date(upcoming.scheduled_start).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}` : 'Ask your administrator or teacher to schedule the next session.'}</p></div>{upcoming?.meeting_url && <a className="btn primary" href={upcoming.meeting_url} target="_blank" rel="noreferrer">Join class</a>}</section>
+    <section className="panel program-next"><div><span className="eyebrow">NEXT CLASS</span><h3>{upcoming ? `Session ${upcoming.session_number}` : 'No upcoming class'}</h3><p>{upcoming ? `${new Date(upcoming.scheduled_start).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})} · ${new Date(upcoming.scheduled_start).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}` : 'Schedule the next session when ready.'}</p></div>{upcoming?.meeting_url && <a className="btn primary" href={upcoming.meeting_url} target="_blank" rel="noreferrer">Join class</a>}</section>
     <section className="panel"><div className="panel-head"><div><h3>Program calendar</h3><p className="panel-subtitle">Your spreadsheet workflow is now a live session ledger.</p></div><div className="program-view-toggle"><button className={view==='calendar'?'btn primary small':'btn small'} onClick={()=>setView('calendar')}><CalendarDays size={15}/>Calendar</button><button className={view==='ledger'?'btn primary small':'btn small'} onClick={()=>setView('ledger')}><FileText size={15}/>Ledger</button></div></div>{view==='calendar'?<div className="program-months">{months.map(([month,items])=><div className="program-month" key={month}><h4>{month}</h4>{items.map(s=><SessionRow key={s.id} session={s} role={profile.role} onManage={()=>setSelectedSession(s)}/>)}</div>)}</div>:<div className="session-ledger">{sessions.map(s=><SessionRow key={s.id} session={s} role={profile.role} onManage={()=>setSelectedSession(s)}/>)}</div>}</section>
     <section className="panel"><div className="panel-head"><div><h3>Contract benefits & rules</h3><p className="panel-subtitle">These rules are enforced by the session workflow.</p></div></div><div className="program-benefits"><div><strong>{enrollment?.monthly_sessions}</strong><span>sessions per month</span></div><div><strong>{enrollment?.postponements_total}</strong><span>postponements included</span></div><div><strong>{enrollment?.ebook_total}</strong><span>free e-books</span></div><div><strong>₱</strong><span>upfront enrollment payment</span></div></div><ul className="program-rules"><li>Student absence consumes a session and does not create a make-up.</li><li>Teacher absence does not consume the session and automatically creates a make-up.</li><li>Holidays do not consume sessions.</li><li>Teacher confirmation is required before a lesson is considered completed.</li></ul></section>
     {selectedSession && <SessionEditor session={selectedSession} role={profile.role} postponementsRemaining={postponementsRemaining} close={()=>setSelectedSession(null)} saved={()=>{setSelectedSession(null);void loadProgram();void loadEnrollments()}}/>}
