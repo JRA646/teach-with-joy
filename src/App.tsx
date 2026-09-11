@@ -9,6 +9,7 @@ import './program-preferences.css'
 import './workspace-professional.css'
 import './teacher-workspace.css'
 import './student-workspace.css'
+import './ui-density.css'
 
 export default function App() {
   const [session, setSession] = useState<any>(null)
