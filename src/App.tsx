@@ -9,6 +9,7 @@ import TeacherProgramShortcut from './components/TeacherProgramShortcut'
 import ProgramPreferences from './components/ProgramPreferences'
 import './program.css'
 import './teacher-program-shortcut.css'
+import './program-preferences.css'
 
 export default function App() {
   const [session, setSession] = useState<any>(null)
