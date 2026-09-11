@@ -78,18 +78,12 @@ export default function TeacherPrograms({ profile }: { profile: Profile }) {
     <section className="panel">
       <div className="panel-head">
         <div><h3><CalendarDays size={18} /> Programs & session ledger</h3><p className="panel-subtitle">Select a program above to manage its schedule and attendance.</p></div>
-        {enrollments.length > 1 && <select value={selectedEnrollmentId} onChange={e => setSelectedEnrollmentId(e.target.value)}>{enrollments.map(e => <option key={e.id} value={e.id}>{studentName(e.student_id, students)} · {e.contract_type === 'three_month' ? '3-Month' : 'Monthly'} · {e.start_date}</option>)}</select>}
       </div>
-      {enrollments.length ? <ProgramWorkspace key={`${refreshKey}-${selectedEnrollmentId}`} profile={profile} /> : <div className="empty-state"><GraduationCap size={30}/><h3>No program yet</h3><p>Select one of your students above and use <strong>New enrollment</strong> to create the 20-session or 3-month program.</p><button className="btn primary" onClick={() => setShowCreate(true)}><Plus size={16}/> Create first enrollment</button></div>}
+      {enrollments.length ? <ProgramWorkspace key={`${refreshKey}-${selectedEnrollmentId}`} profile={profile} enrollmentId={selectedEnrollmentId} /> : <div className="empty-state"><GraduationCap size={30}/><h3>No program yet</h3><p>Select one of your students above and use <strong>New enrollment</strong> to create the 20-session or 3-month program.</p><button className="btn primary" onClick={() => setShowCreate(true)}><Plus size={16}/> Create first enrollment</button></div>}
     </section>
 
     {showCreate && <CreateEnrollment students={students} teacherId={profile.id} close={() => setShowCreate(false)} done={() => { setShowCreate(false); void loadData(); setRefreshKey(x => x + 1) }} />}
   </div>
-}
-
-function studentName(id: string, students: Profile[]) {
-  const student = students.find(x => x.id === id)
-  return student?.full_name || student?.email || 'Student'
 }
 
 function CreateEnrollment({ students, teacherId, close, done }: { students: Profile[]; teacherId: string; close: () => void; done: () => void }) {
