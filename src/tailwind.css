@@ -14,7 +14,7 @@
 @layer base {
   html { @apply scroll-smooth; }
   body { @apply m-0 bg-slate-50 font-sans text-slate-900 antialiased; }
-  button, input, select, textarea { @apply font-inherit; }
+  button, input, select, textarea { font: inherit; }
   button { @apply cursor-pointer; }
   button:disabled { @apply cursor-not-allowed; }
   ::selection { @apply bg-brand-100 text-brand-700; }
@@ -79,8 +79,4 @@
   .app-shell input, .app-shell select, .app-shell textarea,
   .admin-shell input, .admin-shell select, .admin-shell textarea,
   .public-site input, .public-site select, .public-site textarea { @apply rounded-xl border border-slate-200 bg-white outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100; }
-}
-
-@layer utilities {
-  .font-inherit { font: inherit; }
 }
