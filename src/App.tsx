@@ -11,6 +11,7 @@ import ProgramPreferences from './components/ProgramPreferences'
 import './program.css'
 import './teacher-program-shortcut.css'
 import './program-preferences.css'
+import './program-route-shell.css'
 
 export default function App() {
   const [session, setSession] = useState<any>(null)
@@ -38,7 +39,7 @@ export default function App() {
   if (!session || !profile) return <ManagedPublicSite />
   if (isProgramRoute) {
     return profile.role === 'teacher'
-      ? <TeacherPrograms profile={profile} />
+      ? <div className="program-route-shell"><Workspace profile={profile} /><div className="program-route-overlay"><TeacherPrograms profile={profile} /></div></div>
       : <div className="program-route"><ProgramWorkspace profile={profile} /><ProgramPreferences profile={profile} /></div>
   }
   return <div className="workspace-route"><Workspace profile={profile} />{profile.role === 'teacher' ? <TeacherProgramShortcut /> : <StudentProgramShortcut />}</div>
