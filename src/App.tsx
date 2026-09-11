@@ -6,6 +6,7 @@ import Workspace from './components/Workspace'
 import ProgramWorkspace from './components/ProgramWorkspace'
 import TeacherPrograms from './components/TeacherPrograms'
 import TeacherProgramShortcut from './components/TeacherProgramShortcut'
+import ProgramPreferences from './components/ProgramPreferences'
 import './program.css'
 import './teacher-program-shortcut.css'
 
@@ -33,6 +34,10 @@ export default function App() {
   if (isAdminRoute) return <AdminSite />
   if (loading) return <div className="screen-loader">Loading TeachWithJoy...</div>
   if (!session || !profile) return <ManagedPublicSite />
-  if (isProgramRoute) return profile.role === 'teacher' ? <TeacherPrograms profile={profile} /> : <ProgramWorkspace profile={profile} />
+  if (isProgramRoute) {
+    return profile.role === 'teacher'
+      ? <TeacherPrograms profile={profile} />
+      : <div className="program-route"><ProgramWorkspace profile={profile} /><ProgramPreferences profile={profile} /></div>
+  }
   return <div className="workspace-route"><Workspace profile={profile} />{profile.role === 'teacher' && <TeacherProgramShortcut />}</div>
 }
