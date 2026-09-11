@@ -13,6 +13,7 @@ import './teacher-program-shortcut.css'
 import './program-preferences.css'
 import './program-route-shell.css'
 import './workspace-professional.css'
+import './program-professional-theme.css'
 
 export default function App() {
   const [session, setSession] = useState<any>(null)
