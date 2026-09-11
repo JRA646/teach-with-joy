@@ -1,5 +1,4 @@
 -- Teach With Joy: enrollment, session ledger, attendance, teacher availability and contract benefits.
--- Apply this migration to the connected Supabase project before using the new workspace screens.
 
 create table if not exists public.enrollments (
   id uuid primary key default gen_random_uuid(),
@@ -51,8 +50,7 @@ create table if not exists public.teacher_availability (
   start_time time not null,
   end_time time not null,
   timezone text not null default 'Asia/Manila',
-  is_active boolean not null default true,
-  created_at timestamptz not null default now(),
+  active boolean not null default true,
   unique(teacher_id, day_of_week, start_time, end_time)
 );
 
@@ -62,10 +60,10 @@ create table if not exists public.preferred_schedules (
   day_of_week integer not null check (day_of_week between 0 and 6),
   start_time time not null,
   end_time time not null,
-  priority integer not null default 1 check (priority > 0),
+  priority integer not null default 1,
   status text not null default 'requested' check (status in ('requested','approved','rejected')),
-  created_at timestamptz not null default now(),
-  unique(enrollment_id, day_of_week, start_time, end_time)
+  notes text,
+  unique(enrollment_id, day_of_week, start_time)
 );
 
 create table if not exists public.holidays (
@@ -73,9 +71,8 @@ create table if not exists public.holidays (
   holiday_date date not null,
   country_code text not null check (country_code in ('PH','KR')),
   name text not null,
-  is_active boolean not null default true,
-  created_at timestamptz not null default now(),
-  unique(holiday_date, country_code, name)
+  active boolean not null default true,
+  unique(holiday_date, country_code)
 );
 
 create table if not exists public.enrollment_payments (
@@ -93,37 +90,44 @@ create table if not exists public.ebook_entitlements (
   id uuid primary key default gen_random_uuid(),
   enrollment_id uuid not null references public.enrollments(id) on delete cascade,
   title text not null,
-  status text not null default 'available' check (status in ('available','claimed','delivered')),
-  claimed_at timestamptz,
-  created_at timestamptz not null default now()
+  status text not null default 'available' check (status in ('available','claimed')),
+  claimed_at timestamptz
 );
 
 create or replace function public.touch_program_updated_at()
 returns trigger language plpgsql as $$
-begin new.updated_at = now(); return new; end;
+begin
+  new.updated_at = now();
+  return new;
+end;
 $$;
 
 drop trigger if exists trg_enrollments_updated_at on public.enrollments;
-create trigger trg_enrollments_updated_at before update on public.enrollments for each row execute function public.touch_program_updated_at();
+create trigger trg_enrollments_updated_at before update on public.enrollments
+for each row execute function public.touch_program_updated_at();
 
 drop trigger if exists trg_sessions_updated_at on public.sessions;
-create trigger trg_sessions_updated_at before update on public.sessions for each row execute function public.touch_program_updated_at();
+create trigger trg_sessions_updated_at before update on public.sessions
+for each row execute function public.touch_program_updated_at();
 
 create or replace function public.create_enrollment_session_ledger()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql security definer set search_path = public as $$
 begin
   insert into public.sessions (enrollment_id, session_number, student_id, teacher_id)
-  select new.id, g, new.student_id, new.teacher_id from generate_series(1, new.total_sessions) g;
-  if new.ebook_total > 0 then
-    insert into public.ebook_entitlements (enrollment_id, title)
-    select new.id, 'Free e-book ' || g from generate_series(1, new.ebook_total) g;
-  end if;
+  select new.id, n, new.student_id, new.teacher_id
+  from generate_series(1, new.total_sessions) n;
+
+  insert into public.ebook_entitlements (enrollment_id, title)
+  select new.id, 'Free e-book #' || n
+  from generate_series(1, new.ebook_total) n;
+
   return new;
 end;
 $$;
 
 drop trigger if exists trg_create_enrollment_ledger on public.enrollments;
-create trigger trg_create_enrollment_ledger after insert on public.enrollments for each row execute function public.create_enrollment_session_ledger();
+create trigger trg_create_enrollment_ledger after insert on public.enrollments
+for each row execute function public.create_enrollment_session_ledger();
 
 alter table public.enrollments enable row level security;
 alter table public.sessions enable row level security;
@@ -133,37 +137,50 @@ alter table public.holidays enable row level security;
 alter table public.enrollment_payments enable row level security;
 alter table public.ebook_entitlements enable row level security;
 
-create policy enrollments_admin_all on public.enrollments for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy enrollments_student_select on public.enrollments for select to authenticated using (student_id = (select auth.uid()));
-create policy enrollments_teacher_select on public.enrollments for select to authenticated using (teacher_id = (select auth.uid()));
+-- PostgreSQL does not support CREATE POLICY IF NOT EXISTS, so use DROP/CREATE.
+drop policy if exists enrollments_admin_all on public.enrollments;
+create policy enrollments_admin_all on public.enrollments for all using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')) with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
+drop policy if exists enrollments_student_read on public.enrollments;
+create policy enrollments_student_read on public.enrollments for select using (student_id = auth.uid());
+drop policy if exists enrollments_teacher_read on public.enrollments;
+create policy enrollments_teacher_read on public.enrollments for select using (teacher_id = auth.uid());
 
-create policy sessions_admin_all on public.sessions for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy sessions_student_select on public.sessions for select to authenticated using (student_id = (select auth.uid()));
-create policy sessions_teacher_all on public.sessions for all to authenticated using (teacher_id = (select auth.uid())) with check (teacher_id = (select auth.uid()));
+drop policy if exists sessions_admin_all on public.sessions;
+create policy sessions_admin_all on public.sessions for all using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')) with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
+drop policy if exists sessions_student_read on public.sessions;
+create policy sessions_student_read on public.sessions for select using (student_id = auth.uid());
+drop policy if exists sessions_teacher_read on public.sessions;
+create policy sessions_teacher_read on public.sessions for select using (teacher_id = auth.uid());
 
-create policy teacher_availability_admin_all on public.teacher_availability for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy teacher_availability_teacher_all on public.teacher_availability for all to authenticated using (teacher_id = (select auth.uid())) with check (teacher_id = (select auth.uid()));
-create policy teacher_availability_student_select on public.teacher_availability for select to authenticated using (is_active = true);
+drop policy if exists availability_admin_all on public.teacher_availability;
+create policy availability_admin_all on public.teacher_availability for all using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')) with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
+drop policy if exists availability_teacher_read on public.teacher_availability;
+create policy availability_teacher_read on public.teacher_availability for select using (teacher_id = auth.uid());
 
-create policy preferred_schedules_admin_all on public.preferred_schedules for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy preferred_schedules_student_all on public.preferred_schedules for all to authenticated using (exists (select 1 from public.enrollments e where e.id = enrollment_id and e.student_id = (select auth.uid()))) with check (exists (select 1 from public.enrollments e where e.id = enrollment_id and e.student_id = (select auth.uid())));
-create policy preferred_schedules_teacher_select on public.preferred_schedules for select to authenticated using (exists (select 1 from public.enrollments e where e.id = enrollment_id and e.teacher_id = (select auth.uid())));
+drop policy if exists preferred_admin_all on public.preferred_schedules;
+create policy preferred_admin_all on public.preferred_schedules for all using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')) with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
+drop policy if exists preferred_student_read on public.preferred_schedules;
+create policy preferred_student_read on public.preferred_schedules for select using (exists (select 1 from public.enrollments e where e.id = preferred_schedules.enrollment_id and e.student_id = auth.uid()));
 
-create policy holidays_authenticated_select on public.holidays for select to authenticated using (is_active = true);
-create policy holidays_admin_all on public.holidays for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
+drop policy if exists holidays_read_authenticated on public.holidays;
+create policy holidays_read_authenticated on public.holidays for select to authenticated using (true);
 
-create policy enrollment_payments_admin_all on public.enrollment_payments for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy enrollment_payments_student_select on public.enrollment_payments for select to authenticated using (exists (select 1 from public.enrollments e where e.id = enrollment_id and e.student_id = (select auth.uid())));
-create policy enrollment_payments_teacher_select on public.enrollment_payments for select to authenticated using (exists (select 1 from public.enrollments e where e.id = enrollment_id and e.teacher_id = (select auth.uid())));
+drop policy if exists payments_admin_all on public.enrollment_payments;
+create policy payments_admin_all on public.enrollment_payments for all using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')) with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
+drop policy if exists payments_student_read on public.enrollment_payments;
+create policy payments_student_read on public.enrollment_payments for select using (exists (select 1 from public.enrollments e where e.id = enrollment_payments.enrollment_id and e.student_id = auth.uid()));
 
-create policy ebook_entitlements_admin_all on public.ebook_entitlements for all to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy ebook_entitlements_student_select on public.ebook_entitlements for select to authenticated using (exists (select 1 from public.enrollments e where e.id = enrollment_id and e.student_id = (select auth.uid())));
-create policy ebook_entitlements_teacher_select on public.ebook_entitlements for select to authenticated using (exists (select 1 from public.enrollments e where e.id = enrollment_id and e.teacher_id = (select auth.uid())));
+drop policy if exists ebooks_admin_all on public.ebook_entitlements;
+create policy ebooks_admin_all on public.ebook_entitlements for all using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')) with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
+drop policy if exists ebooks_student_read on public.ebook_entitlements;
+create policy ebooks_student_read on public.ebook_entitlements for select using (exists (select 1 from public.enrollments e where e.id = ebook_entitlements.enrollment_id and e.student_id = auth.uid()));
 
 create index if not exists idx_enrollments_student on public.enrollments(student_id);
 create index if not exists idx_enrollments_teacher on public.enrollments(teacher_id);
 create index if not exists idx_sessions_enrollment on public.sessions(enrollment_id);
-create index if not exists idx_sessions_scheduled_start on public.sessions(scheduled_start);
-create index if not exists idx_sessions_teacher on public.sessions(teacher_id);
 create index if not exists idx_sessions_student on public.sessions(student_id);
-create index if not exists idx_holidays_date on public.holidays(holiday_date);
+create index if not exists idx_sessions_teacher on public.sessions(teacher_id);
+create index if not exists idx_sessions_schedule on public.sessions(scheduled_start);
+create index if not exists idx_preferred_enrollment on public.preferred_schedules(enrollment_id);
+create index if not exists idx_payments_enrollment on public.enrollment_payments(enrollment_id);
+create index if not exists idx_ebooks_enrollment on public.ebook_entitlements(enrollment_id);
