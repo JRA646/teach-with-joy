@@ -7,6 +7,7 @@ import ProgramWorkspace from './components/ProgramWorkspace'
 import TeacherPrograms from './components/TeacherPrograms'
 import TeacherProgramShortcut from './components/TeacherProgramShortcut'
 import './program.css'
+import './teacher-program-shortcut.css'
 
 export default function App() {
   const [session, setSession] = useState<any>(null)
