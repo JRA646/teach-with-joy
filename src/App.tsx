@@ -5,6 +5,7 @@ import AdminSite from './components/AdminSite'
 import Workspace from './components/Workspace'
 import ProgramWorkspace from './components/ProgramWorkspace'
 import TeacherPrograms from './components/TeacherPrograms'
+import TeacherProgramShortcut from './components/TeacherProgramShortcut'
 import './program.css'
 
 export default function App() {
@@ -32,5 +33,5 @@ export default function App() {
   if (loading) return <div className="screen-loader">Loading TeachWithJoy...</div>
   if (!session || !profile) return <ManagedPublicSite />
   if (isProgramRoute) return profile.role === 'teacher' ? <TeacherPrograms profile={profile} /> : <ProgramWorkspace profile={profile} />
-  return <Workspace profile={profile} refresh={() => loadProfile(profile.id)} />
+  return <div className="workspace-route"><Workspace profile={profile} />{profile.role === 'teacher' && <TeacherProgramShortcut />}</div>
 }
