@@ -3,6 +3,7 @@ import { Plus, RefreshCw, Users, GraduationCap, CalendarDays } from 'lucide-reac
 import { supabase } from '../lib/supabase'
 import ProgramWorkspace from './ProgramWorkspace'
 import PreferredSchedulePanel from './PreferredSchedulePanel'
+import EnrollmentFinancePanel from './EnrollmentFinancePanel'
 
 type Profile = any
 type Enrollment = any
@@ -40,34 +41,18 @@ export default function TeacherPrograms({ profile }: { profile: Profile }) {
 
   return <div className="page teacher-programs-page">
     <div className="page-title">
-      <div><span className="eyebrow">TEACHER PROGRAMS</span><h1>Students & Programs</h1><p>Manage enrollments, preferred schedules, 20-session programs, attendance, make-ups, and progress.</p></div>
+      <div><span className="eyebrow">TEACHER PROGRAMS</span><h1>Students & Programs</h1><p>Manage enrollments, preferred schedules, 20-session programs, attendance, make-ups, payments, and progress.</p></div>
       <div className="program-toolbar"><button className="btn" onClick={() => { void loadData(); setRefreshKey(x => x + 1) }}><RefreshCw size={16}/> Refresh</button><button className="btn primary" onClick={() => { setError(''); setShowCreate(true) }}><Plus size={16}/> New enrollment</button></div>
     </div>
     {error && <div className="form-error">{error}</div>}
 
-    <div className="program-stats stat-grid">
-      <div className="stat-card"><div><strong>{students.length}</strong><small>Students</small></div></div>
-      <div className="stat-card"><div><strong>{activeEnrollments.length}</strong><small>Active programs</small></div></div>
-      <div className="stat-card"><div><strong>{enrollments.reduce((sum, x) => sum + Number(x.total_sessions || 0), 0)}</strong><small>Contracted sessions</small></div></div>
-      <div className="stat-card"><div><strong>{enrollments.reduce((sum, x) => sum + Number(x.postponements_total || 0) - Number(x.postponements_used || 0), 0)}</strong><small>Postponements left</small></div></div>
-    </div>
+    <div className="program-stats stat-grid"><div className="stat-card"><div><strong>{students.length}</strong><small>Students</small></div></div><div className="stat-card"><div><strong>{activeEnrollments.length}</strong><small>Active programs</small></div></div><div className="stat-card"><div><strong>{enrollments.reduce((sum, x) => sum + Number(x.total_sessions || 0), 0)}</strong><small>Contracted sessions</small></div></div><div className="stat-card"><div><strong>{enrollments.reduce((sum, x) => sum + Number(x.postponements_total || 0) - Number(x.postponements_used || 0), 0)}</strong><small>Postponements left</small></div></div></div>
 
-    <section className="panel teacher-student-list">
-      <div className="panel-head"><div><h3><Users size={18}/> My students</h3><p className="panel-subtitle">Students are shown even before they have a program. Enroll them when they are ready.</p></div></div>
-      {students.length ? <div className="teacher-student-grid">{students.map(student => {
-        const program = enrollments.find(x => x.student_id === student.id && x.status === 'active')
-        return <button key={student.id} className={`teacher-student-card ${program?.id === selectedEnrollmentId ? 'selected' : ''}`} onClick={() => program && setSelectedEnrollmentId(program.id)}>
-          <div className="teacher-student-avatar"><GraduationCap size={18}/></div><div className="teacher-student-info"><strong>{student.full_name || student.email}</strong><span>{student.email}</span></div><span className={`program-status ${program ? 'success' : ''}`}>{program ? (program.contract_type === 'three_month' ? '3-Month' : 'Monthly') : 'No program'}</span>
-        </button>
-      })}</div> : <div className="empty-state"><Users size={30}/><h3>No students found</h3><p>Create student accounts first, then enroll them here.</p></div>}
-    </section>
+    <section className="panel teacher-student-list"><div className="panel-head"><div><h3><Users size={18}/> My students</h3><p className="panel-subtitle">Students are shown even before they have a program. Enroll them when they are ready.</p></div></div>{students.length ? <div className="teacher-student-grid">{students.map(student => { const program = enrollments.find(x => x.student_id === student.id && x.status === 'active'); return <button key={student.id} className={`teacher-student-card ${program?.id === selectedEnrollmentId ? 'selected' : ''}`} onClick={() => program && setSelectedEnrollmentId(program.id)}><div className="teacher-student-avatar"><GraduationCap size={18}/></div><div className="teacher-student-info"><strong>{student.full_name || student.email}</strong><span>{student.email}</span></div><span className={`program-status ${program ? 'success' : ''}`}>{program ? (program.contract_type === 'three_month' ? '3-Month' : 'Monthly') : 'No program'}</span></button>})}</div> : <div className="empty-state"><Users size={30}/><h3>No students found</h3><p>Create student accounts first, then enroll them here.</p></div>}</section>
 
-    {selectedProgram && <PreferredSchedulePanel enrollmentId={selectedProgram.id} onGenerated={() => setRefreshKey(x => x + 1)}/>} 
+    {selectedProgram && <><PreferredSchedulePanel enrollmentId={selectedProgram.id} onGenerated={() => setRefreshKey(x => x + 1)}/><EnrollmentFinancePanel enrollmentId={selectedProgram.id}/></>}
 
-    <section className="panel">
-      <div className="panel-head"><div><h3><CalendarDays size={18}/> Programs & session ledger</h3><p className="panel-subtitle">Select a program above to manage its schedule and attendance.</p></div></div>
-      {enrollments.length ? <ProgramWorkspace key={`${refreshKey}-${selectedEnrollmentId}`} profile={profile} enrollmentId={selectedEnrollmentId}/> : <div className="empty-state"><GraduationCap size={30}/><h3>No program yet</h3><p>Select one of your students and use <strong>New enrollment</strong> to create the 20-session or 3-month program.</p><button className="btn primary" onClick={() => setShowCreate(true)}><Plus size={16}/> Create first enrollment</button></div>}
-    </section>
+    <section className="panel"><div className="panel-head"><div><h3><CalendarDays size={18}/> Programs & session ledger</h3><p className="panel-subtitle">Select a program above to manage its schedule and attendance.</p></div></div>{enrollments.length ? <ProgramWorkspace key={`${refreshKey}-${selectedEnrollmentId}`} profile={profile} enrollmentId={selectedEnrollmentId}/> : <div className="empty-state"><GraduationCap size={30}/><h3>No program yet</h3><p>Select one of your students and use <strong>New enrollment</strong> to create the 20-session or 3-month program.</p><button className="btn primary" onClick={() => setShowCreate(true)}><Plus size={16}/> Create first enrollment</button></div>}</section>
 
     {showCreate && <CreateEnrollment students={students} teacherId={profile.id} close={() => setShowCreate(false)} done={() => { setShowCreate(false); void loadData(); setRefreshKey(x => x + 1) }}/>} 
   </div>
