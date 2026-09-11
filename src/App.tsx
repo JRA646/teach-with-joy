@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import ManagedPublicSite from './components/ManagedPublicSite'
 import AdminSite from './components/AdminSite'
-import Workspace from './components/Workspace'
 import TeacherWorkspace from './components/TeacherWorkspace'
-import ProgramWorkspace from './components/ProgramWorkspace'
-import ProgramPreferences from './components/ProgramPreferences'
+import StudentWorkspace from './components/StudentWorkspace'
 import './program.css'
 import './program-preferences.css'
 import './workspace-professional.css'
 import './teacher-workspace.css'
+import './student-workspace.css'
 
 export default function App() {
   const [session, setSession] = useState<any>(null)
@@ -35,6 +34,5 @@ export default function App() {
   if (loading) return <div className="screen-loader">Loading TeachWithJoy...</div>
   if (!session || !profile) return <ManagedPublicSite />
   if (profile.role === 'teacher') return <TeacherWorkspace profile={profile} />
-  if (window.location.pathname === '/program') return <div className="program-route"><ProgramWorkspace profile={profile}/><ProgramPreferences profile={profile}/></div>
-  return <div className="workspace-route"><Workspace profile={profile} /></div>
+  return <StudentWorkspace profile={profile} />
 }
