@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, RefreshCw, Users, GraduationCap, CalendarDays } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import ProgramWorkspace from './ProgramWorkspace'
@@ -36,7 +36,6 @@ export default function TeacherPrograms({ profile }: { profile: Profile }) {
 
   useEffect(() => { void loadData() }, [profile.id])
 
-  const enrolledStudentIds = useMemo(() => new Set(enrollments.map(x => x.student_id)), [enrollments])
   const activeEnrollments = enrollments.filter(x => x.status === 'active')
 
   return <div className="page">
