@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, Check, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { addTeacherAvailability, removeTeacherAvailability } from '../services/scheduling'
 
 const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 
@@ -41,24 +42,38 @@ export default function TeacherSchedule({ profile, openPage }: { profile: any; o
       return
     }
 
-    const overlap = availability.some(a => a.day_of_week === day && String(a.start_time).slice(0, 5) === start && String(a.end_time).slice(0, 5) === end)
+    const overlap = availability.some(a => {
+      if (a.day_of_week !== day) return false
+      const existingStart = String(a.start_time).slice(0, 5)
+      const existingEnd = String(a.end_time).slice(0, 5)
+      return start < existingEnd && end > existingStart
+    })
     if (overlap) {
-      setError('This recurring availability already exists.')
+      setError('This availability overlaps an existing recurring availability window.')
       setSaving(false)
       return
     }
 
-    const { error: e } = await supabase.from('teacher_availability').insert({ teacher_id: profile.id, day_of_week: day, start_time: start, end_time: end, timezone: 'Asia/Manila', active: true })
-    setSaving(false)
-    if (e) { setError(e.message); return }
-    setNotice(`${days[day]} ${formatTime(start)}–${formatTime(end)} is now available.`)
-    await load()
+    try {
+      await addTeacherAvailability({ userId: profile.id, dayOfWeek: day, startTime: start, endTime: end, timezone: 'Asia/Manila' })
+      setNotice(`${days[day]} ${formatTime(start)}–${formatTime(end)} is now available.`)
+      await load()
+    } catch (e: any) {
+      setError(e?.message || 'Unable to add availability.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function removeAvailability(id: string) {
     setError(''); setNotice('')
-    const { error: e } = await supabase.from('teacher_availability').update({ active: false }).eq('id', id).eq('teacher_id', profile.id)
-    if (e) setError(e.message); else { setNotice('Recurring availability removed.'); await load() }
+    try {
+      await removeTeacherAvailability(profile.id, id)
+      setNotice('Recurring availability removed.')
+      await load()
+    } catch (e: any) {
+      setError(e?.message || 'Unable to remove availability.')
+    }
   }
 
   const sessionDays = useMemo(() => {
@@ -79,7 +94,7 @@ export default function TeacherSchedule({ profile, openPage }: { profile: any; o
     {notice && <div className="form-success compact">{notice}</div>}
     <div className="schedule-layout">
       <section className="panel">
-        <div className="panel-head"><div><h3>Recurring availability</h3><p className="panel-subtitle">Set the days and hours when you can teach. These settings are used by the program schedule generator.</p></div></div>
+        <div className="panel-head"><div><h3>Recurring availability</h3><p className="panel-subtitle">Set the days and hours when you can teach. These settings are used by the scheduling engine.</p></div></div>
         <div className="teacher-availability-form">
           <label>Day<select value={day} onChange={e => setDay(Number(e.target.value))}>{days.map((x, i) => <option value={i} key={x}>{x}</option>)}</select></label>
           <label>Start<input type="time" value={start} onChange={e => setStart(e.target.value)}/></label>
@@ -87,7 +102,7 @@ export default function TeacherSchedule({ profile, openPage }: { profile: any; o
           <button className="btn primary" disabled={saving} onClick={() => void addAvailability()}><Plus size={16}/> {saving ? 'Adding…' : 'Add'}</button>
         </div>
         <div className="availability-list">{availability.length ? availability.map(a => <div className="availability-row" key={a.id}><span className="availability-day">{days[a.day_of_week]}</span><strong>{formatTime(String(a.start_time).slice(0,5))} – {formatTime(String(a.end_time).slice(0,5))}</strong><span className="status success"><Check size={12}/> Available</span><button className="icon-btn danger-icon" title="Remove availability" onClick={() => void removeAvailability(a.id)}><Trash2 size={16}/></button></div>) : <div className="empty-state"><CalendarDays size={30}/><h3>No recurring availability yet</h3><p>Add the days and times when you can teach.</p></div>}</div>
-        {availability.length > 0 && <div className="schedule-tip">Tip: set every day/time block you can reliably teach. Students' preferred times are matched against these windows.</div>}
+        {availability.length > 0 && <div className="schedule-tip">Tip: set every day/time block you can reliably teach. Student availability and existing sessions are checked when a slot is booked.</div>}
       </section>
       <section className="panel">
         <div className="panel-head"><div><h3>Upcoming program sessions</h3><p className="panel-subtitle">Generated sessions already assigned to your teaching calendar.</p></div></div>
