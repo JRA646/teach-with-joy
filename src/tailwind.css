@@ -33,7 +33,8 @@
   .tw-textarea { @apply min-h-24 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100; }
   .tw-btn { @apply inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition duration-200; }
   .tw-btn-primary { @apply border-brand-500 bg-brand-500 text-white shadow-sm hover:-translate-y-0.5 hover:bg-brand-600; }
-  .tw-btn-secondary { @apply border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-brand-200 hover:text-brand-600; }
+  .tw-btn-secondary { @apply border-slate-200 bg-white text-slate-700; }
+  .tw-btn-secondary:hover { @apply -translate-y-0.5 border-brand-200 text-brand-600; }
   .tw-btn-action { @apply border-action-500 bg-action-500 text-white shadow-sm hover:-translate-y-0.5 hover:bg-action-600; }
   .tw-btn-danger { @apply border-red-200 bg-red-50 text-red-600 hover:bg-red-100; }
   .tw-badge { @apply inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold; }
@@ -56,7 +57,8 @@
   .stat { @apply transition hover:-translate-y-0.5 hover:shadow-md; }
   .btn { @apply rounded-xl border border-slate-200 bg-white text-slate-700 shadow-none transition duration-200; }
   .btn.primary { @apply border-brand-500 bg-brand-500 text-white shadow-sm hover:bg-brand-600; }
-  .btn.secondary { @apply border-slate-200 bg-white text-brand-600 hover:border-brand-200 hover:bg-brand-50; }
+  .btn.secondary { @apply border-slate-200 bg-white text-brand-600; }
+  .btn.secondary:hover { @apply border-brand-200 bg-brand-50; }
 
   /* Public-site primitives. Existing page-specific CSS remains intact; these rules provide the shared Tailwind system. */
   .public-site { @apply min-h-screen bg-slate-50 text-slate-900; }
