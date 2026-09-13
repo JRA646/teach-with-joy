@@ -1,194 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bell, CalendarDays, CheckCircle2, Clock3, GraduationCap, LayoutDashboard, LogOut, MessageCircle, UserRound, BookOpen, ArrowRight, Video, RefreshCw } from 'lucide-react'
+import { Bell, CalendarClock, CalendarDays, CheckCircle2, Clock3, GraduationCap, LayoutDashboard, LogOut, MessageCircle, UserRound, ArrowRight, Video, RefreshCw } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import Notifications from './Notifications'
 import Messages from './Messages'
 import EnhancedProfile from './Profile'
 import ProgramWorkspace from './ProgramWorkspace'
 import ProgramPreferences from './ProgramPreferences'
+import StudentProposals from './StudentProposals'
 
-const getInitialPage = () => {
-  const path = window.location.pathname
-  if (path === '/program' || path === '/student/program') return 'program'
-  if (path === '/schedule' || path === '/student/schedule') return 'schedule'
-  if (path === '/messages' || path === '/student/messages') return 'messages'
-  if (path === '/profile' || path === '/student/profile') return 'profile'
-  return 'dashboard'
+const getInitialPage = () => { const path=window.location.pathname; if(path==='/program'||path==='/student/program')return'program'; if(path==='/proposals'||path==='/student/proposals')return'proposals'; if(path==='/schedule'||path==='/student/schedule')return'schedule'; if(path==='/messages'||path==='/student/messages')return'messages'; if(path==='/profile'||path==='/student/profile')return'profile'; return'dashboard' }
+const terminal=['completed','student_absent','teacher_absent','teacher_cancelled','student_cancelled','postponed','holiday','no_show','technical_issue']
+export default function StudentWorkspace({profile}:{profile:any}){
+ const [page,setPage]=useState(getInitialPage),[notificationsOpen,setNotificationsOpen]=useState(false),[unread,setUnread]=useState(0)
+ const nav=[['dashboard','Dashboard',LayoutDashboard],['program','My Program',GraduationCap],['proposals','Lesson Proposals',CalendarClock],['schedule','Schedule',CalendarDays],['messages','Messages',MessageCircle],['profile','Profile',UserRound]] as const
+ const navigate=(next:string)=>{const paths:Record<string,string>={dashboard:'/',program:'/program',proposals:'/proposals',schedule:'/schedule',messages:'/messages',profile:'/profile'};window.history.pushState({},'',paths[next]||'/');setPage(next);window.scrollTo({top:0,behavior:'smooth'})}
+ useEffect(()=>{let active=true;const loadUnread=async()=>{const {count}=await supabase.from('notifications').select('id',{count:'exact',head:true}).eq('recipient_id',profile.id).is('read_at',null);if(active)setUnread(count||0)};void loadUnread();const channel=supabase.channel(`student-workspace:${profile.id}`).on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter:`recipient_id=eq.${profile.id}`},()=>void loadUnread()).on('postgres_changes',{event:'*',schema:'public',table:'sessions',filter:`student_id=eq.${profile.id}`},()=>setPage(current=>current)).subscribe();const onPop=()=>setPage(getInitialPage());window.addEventListener('popstate',onPop);return()=>{active=false;supabase.removeChannel(channel);window.removeEventListener('popstate',onPop)}},[profile.id])
+ return <div className="app-shell student-shell"><header className="app-header"><Brand/><div className="top-user"><button className="notification-button" title="Notifications" onClick={()=>setNotificationsOpen(true)}><Bell size={18}/>{unread>0&&<span className="notification-badge">{unread>99?'99+':unread}</span>}</button>{profile.avatar_url?<img className="user-avatar user-avatar-image" src={profile.avatar_url} alt="Profile"/>:<div className="user-avatar">{profile.full_name?.[0]||'S'}</div>}<div><strong>{profile.full_name}</strong><small>Student</small></div></div></header><div className="app-body"><aside className="sidebar"><div className="sidebar-section-label">LEARNING</div>{nav.map(([id,label,Icon])=><button key={id} aria-label={label} className={page===id?'nav-item active':'nav-item'} onClick={()=>navigate(id)}><Icon size={17}/><span>{label}</span></button>)}<button className="nav-item bottom" onClick={()=>supabase.auth.signOut()}><LogOut size={17}/><span>Log Out</span></button></aside><main className="main-content">{page==='dashboard'&&<StudentDashboard profile={profile} openPage={navigate}/>} {page==='program'&&<div className="student-module-stack"><ProgramWorkspace profile={profile}/><ProgramPreferences profile={profile}/></div>} {page==='proposals'&&<StudentProposals profile={profile}/>} {page==='schedule'&&<StudentSchedule profile={profile} openPage={navigate}/>} {page==='messages'&&<Messages profile={profile}/>} {page==='profile'&&<EnhancedProfile profile={profile}/>}</main></div>{notificationsOpen&&<Notifications profile={profile} close={()=>setNotificationsOpen(false)}/>}</div>
 }
-
-const terminal = ['completed', 'student_absent', 'teacher_absent', 'teacher_cancelled', 'student_cancelled', 'postponed', 'holiday', 'no_show', 'technical_issue']
-
-export default function StudentWorkspace({ profile }: { profile: any }) {
-  const [page, setPage] = useState(getInitialPage)
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [unread, setUnread] = useState(0)
-
-  const nav = [
-    ['dashboard', 'Dashboard', LayoutDashboard],
-    ['program', 'My Program', GraduationCap],
-    ['schedule', 'Schedule', CalendarDays],
-    ['messages', 'Messages', MessageCircle],
-    ['profile', 'Profile', UserRound],
-  ] as const
-
-  const navigate = (next: string) => {
-    const paths: Record<string, string> = {
-      dashboard: '/',
-      program: '/program',
-      schedule: '/schedule',
-      messages: '/messages',
-      profile: '/profile',
-    }
-    window.history.pushState({}, '', paths[next] || '/')
-    setPage(next)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  useEffect(() => {
-    let active = true
-    const loadUnread = async () => {
-      const { count } = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('recipient_id', profile.id).is('read_at', null)
-      if (active) setUnread(count || 0)
-    }
-    void loadUnread()
-    const channel = supabase.channel(`student-workspace:${profile.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${profile.id}` }, () => void loadUnread())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `student_id=eq.${profile.id}` }, () => setPage(current => current))
-      .subscribe()
-    const onPop = () => setPage(getInitialPage())
-    window.addEventListener('popstate', onPop)
-    return () => { active = false; supabase.removeChannel(channel); window.removeEventListener('popstate', onPop) }
-  }, [profile.id])
-
-  return <div className="app-shell student-shell">
-    <header className="app-header">
-      <Brand />
-      <div className="top-user">
-        <button className="notification-button" title="Notifications" onClick={() => setNotificationsOpen(true)}><Bell size={18}/>{unread > 0 && <span className="notification-badge">{unread > 99 ? '99+' : unread}</span>}</button>
-        {profile.avatar_url ? <img className="user-avatar user-avatar-image" src={profile.avatar_url} alt="Profile"/> : <div className="user-avatar">{profile.full_name?.[0] || 'S'}</div>}
-        <div><strong>{profile.full_name}</strong><small>Student</small></div>
-      </div>
-    </header>
-    <div className="app-body">
-      <aside className="sidebar">
-        <div className="sidebar-section-label">LEARNING</div>
-        {nav.map(([id, label, Icon]) => <button key={id} aria-label={label} className={page === id ? 'nav-item active' : 'nav-item'} onClick={() => navigate(id)}><Icon size={17}/><span>{label}</span></button>)}
-        <button className="nav-item bottom" onClick={() => supabase.auth.signOut()}><LogOut size={17}/><span>Log Out</span></button>
-      </aside>
-      <main className="main-content">
-        {page === 'dashboard' && <StudentDashboard profile={profile} openPage={navigate}/>} 
-        {page === 'program' && <div className="student-module-stack"><ProgramWorkspace profile={profile}/><ProgramPreferences profile={profile}/></div>}
-        {page === 'schedule' && <StudentSchedule profile={profile} openPage={navigate}/>} 
-        {page === 'messages' && <Messages profile={profile}/>} 
-        {page === 'profile' && <EnhancedProfile profile={profile}/>} 
-      </main>
-    </div>
-    {notificationsOpen && <Notifications profile={profile} close={() => setNotificationsOpen(false)}/>} 
-  </div>
-}
-
-function StudentDashboard({ profile, openPage }: { profile: any; openPage: (page: string) => void }) {
-  const [enrollment, setEnrollment] = useState<any>(null)
-  const [sessions, setSessions] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-
-  async function load() {
-    setLoading(true)
-    const [{ data: enrollments }, { data: sessionRows }] = await Promise.all([
-      supabase.from('enrollments').select('*').eq('student_id', profile.id).eq('status', 'active').order('start_date', { ascending: false }).limit(1),
-      supabase.from('sessions').select('*').eq('student_id', profile.id).order('scheduled_start', { ascending: true, nullsFirst: false }),
-    ])
-    setEnrollment(enrollments?.[0] || null)
-    setSessions(sessionRows || [])
-    setLoading(false)
-  }
-
-  useEffect(() => { void load() }, [profile.id])
-
-  const upcoming = useMemo(() => sessions.find(s => s.scheduled_start && new Date(s.scheduled_start) > new Date() && !terminal.includes(s.status)), [sessions])
-  const consumed = sessions.filter(s => s.counts_as_session).length
-  const completed = sessions.filter(s => s.status === 'completed' && s.counts_as_session).length
-  const remaining = Math.max(Number(enrollment?.total_sessions || 0) - consumed, 0)
-  const progress = enrollment?.total_sessions ? Math.min(100, Math.round((completed / Number(enrollment.total_sessions)) * 100)) : 0
-  const recent = [...sessions].filter(s => terminal.includes(s.status)).sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()).slice(0, 5)
-
-  if (loading) return <div className="page"><div className="student-loading-grid"><div className="skeleton-card"/><div className="skeleton-card"/><div className="skeleton-card"/><div className="skeleton-panel"/></div></div>
-
-  return <div className="page student-dashboard-page">
-    <div className="student-hero">
-      <div>
-        <span className="eyebrow">STUDENT DASHBOARD</span>
-        <h1>Good morning, {profile.full_name?.split(' ')[0] || 'there'} 👋</h1>
-        <p>{upcoming ? 'Your next class is ready when you are.' : enrollment ? 'Your program is active. Your next class will appear here once scheduled.' : 'Your learning journey starts here.'}</p>
-      </div>
-      {upcoming?.meeting_url ? <a className="btn primary" href={upcoming.meeting_url} target="_blank" rel="noreferrer"><Video size={15}/> Join next class</a> : <button className="btn primary" onClick={() => openPage('program')}><GraduationCap size={15}/> View my program</button>}
-    </div>
-
-    {enrollment ? <>
-      <section className="student-next panel">
-        <div className="student-next-copy">
-          <span className="eyebrow">NEXT CLASS</span>
-          <h2>{upcoming ? `Session ${upcoming.session_number}` : 'No upcoming class'}</h2>
-          <p>{upcoming ? `${new Date(upcoming.scheduled_start).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})} · ${new Date(upcoming.scheduled_start).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}` : 'Your teacher will schedule your next session.'}</p>
-          <div className="student-next-meta"><span>{enrollment.contract_type === 'three_month' ? '3-Month Program' : 'Monthly Program'}</span><span>Teacher: assigned</span></div>
-        </div>
-        <div className="student-next-action">{upcoming?.meeting_url ? <a className="btn primary" href={upcoming.meeting_url} target="_blank" rel="noreferrer"><Video size={15}/> Join class</a> : <button className="btn" onClick={() => openPage('schedule')}>View schedule</button>}</div>
-      </section>
-
-      <div className="student-kpi-grid">
-        <div className="student-kpi"><span>Total sessions</span><strong>{enrollment.total_sessions}</strong><small>Your contracted sessions</small></div>
-        <div className="student-kpi"><span>Completed</span><strong>{completed}</strong><small>Teacher-confirmed lessons</small></div>
-        <div className="student-kpi"><span>Remaining</span><strong>{remaining}</strong><small>Sessions still to deliver</small></div>
-        <div className="student-kpi"><span>Progress</span><strong>{progress}%</strong><small>Program completion</small></div>
-      </div>
-
-      <div className="student-dashboard-grid">
-        <section className="panel">
-          <div className="panel-head"><div><h3>My program</h3><p className="panel-subtitle">Your progress at a glance.</p></div><button onClick={() => openPage('program')}>View program <ArrowRight size={13}/></button></div>
-          <div className="student-progress-card">
-            <div className="student-progress-top"><strong>{completed} / {enrollment.total_sessions} sessions</strong><span>{progress}%</span></div>
-            <div className="student-progress-track"><div style={{ width: `${progress}%` }}/></div>
-            <div className="student-progress-meta"><span>{remaining} sessions remaining</span><span>{enrollment.postponements_total ? `${Math.max(Number(enrollment.postponements_total)-Number(enrollment.postponements_used),0)} postponements left` : 'No postponements included'}</span></div>
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-head"><div><h3>Benefits</h3><p className="panel-subtitle">Included with your contract.</p></div></div>
-          <div className="student-benefits">
-            <div><strong>{Math.max(Number(enrollment.postponements_total || 0) - Number(enrollment.postponements_used || 0), 0)}</strong><span>Postponements left</span></div>
-            <div><strong>{enrollment.ebook_total || 0}</strong><span>Free e-books</span></div>
-          </div>
-        </section>
-      </div>
-
-      <section className="panel">
-        <div className="panel-head"><div><h3>Recent attendance</h3><p className="panel-subtitle">Your latest recorded sessions.</p></div><button onClick={() => openPage('program')}>See all <ArrowRight size={13}/></button></div>
-        {recent.length ? <div className="student-attendance-list">{recent.map(s => <div className="student-attendance-row" key={s.id}><div className={`student-attendance-icon ${s.status === 'completed' ? 'success' : ['teacher_absent','teacher_cancelled','postponed','holiday'].includes(s.status) ? 'info' : 'warning'}`}><CheckCircle2 size={16}/></div><div><strong>Session {s.session_number}</strong><span>{s.scheduled_start ? new Date(s.scheduled_start).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Date pending'}</span></div><span className="program-status">{s.status.replaceAll('_',' ')}</span></div>)}</div> : <div className="empty-state"><Clock3 size={28}/><h3>No attendance records yet</h3><p>Your teacher's attendance records will appear here.</p></div>}
-      </section>
-    </> : <section className="panel student-empty-program"><div className="student-empty-icon"><GraduationCap size={28}/></div><h2>No active program yet</h2><p>Your teacher will create your enrollment and session schedule here.</p><button className="btn primary" onClick={() => openPage('program')}>Open My Program</button></section>}
-  </div>
-}
-
-function StudentSchedule({ profile, openPage }: { profile: any; openPage: (page: string) => void }) {
-  const [sessions, setSessions] = useState<any[]>([])
-  const [refreshing, setRefreshing] = useState(false)
-
-  const load = async () => {
-    const { data } = await supabase.from('sessions').select('*').eq('student_id', profile.id).not('scheduled_start', 'is', null).gte('scheduled_start', new Date().toISOString()).order('scheduled_start').limit(30)
-    setSessions(data || [])
-  }
-  useEffect(() => { void load() }, [profile.id])
-
-  return <div className="page student-schedule-page">
-    <div className="page-title"><div><span className="eyebrow">SCHEDULE</span><h1>My learning schedule</h1><p>Your upcoming program sessions and preferred teaching times.</p></div><button className="btn" disabled={refreshing} onClick={async () => { setRefreshing(true); await load(); setRefreshing(false) }}><RefreshCw size={15}/> Refresh</button></div>
-    <section className="panel">
-      <div className="panel-head"><div><h3>Upcoming classes</h3><p className="panel-subtitle">Your confirmed program sessions appear here.</p></div><button onClick={() => openPage('program')}>Manage preferences <ArrowRight size={13}/></button></div>
-      {sessions.length ? <div className="student-schedule-list">{sessions.map(s => <div className="student-schedule-row" key={s.id}><div className="student-date-box"><strong>{new Date(s.scheduled_start).toLocaleDateString('en-US',{month:'short'}).toUpperCase()}</strong><b>{new Date(s.scheduled_start).getDate()}</b></div><div><strong>Session {s.session_number}</strong><span>{new Date(s.scheduled_start).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})} · {new Date(s.scheduled_start).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span></div><div className="student-schedule-actions">{s.meeting_url ? <a className="btn primary small" href={s.meeting_url} target="_blank" rel="noreferrer"><Video size={14}/> Join</a> : <span className="program-status">{s.status.replaceAll('_',' ')}</span>}</div></div>)}</div> : <div className="empty-state"><CalendarDays size={30}/><h3>No upcoming sessions</h3><p>Your teacher will add your next sessions once your schedule is confirmed.</p></div>}
-    </section>
-    <ProgramPreferences profile={profile}/>
-  </div>
-}
-
-function Brand() {
-  return <button className="brand brand-link" onClick={() => { window.history.pushState({}, '', '/'); window.location.reload() }}><span className="brand-icon"><GraduationCap size={19}/></span><strong>TeachWithJoy</strong></button>
-}
+function StudentDashboard({profile,openPage}:{profile:any;openPage:(page:string)=>void}){const [enrollment,setEnrollment]=useState<any>(null),[sessions,setSessions]=useState<any[]>([]),[loading,setLoading]=useState(true);async function load(){setLoading(true);const [{data:enrollments},{data:sessionRows}]=await Promise.all([supabase.from('enrollments').select('*').eq('student_id',profile.id).eq('status','active').order('start_date',{ascending:false}).limit(1),supabase.from('sessions').select('*').eq('student_id',profile.id).order('scheduled_start',{ascending:true,nullsFirst:false})]);setEnrollment(enrollments?.[0]||null);setSessions(sessionRows||[]);setLoading(false)}useEffect(()=>{void load()},[profile.id]);const upcoming=useMemo(()=>sessions.find(s=>s.scheduled_start&&new Date(s.scheduled_start)>new Date()&&!terminal.includes(s.status)),[sessions]);const consumed=sessions.filter(s=>s.counts_as_session).length;const completed=sessions.filter(s=>s.status==='completed'&&s.counts_as_session).length;const remaining=Math.max(Number(enrollment?.total_sessions||0)-consumed,0);const progress=enrollment?.total_sessions?Math.min(100,Math.round((completed/Number(enrollment.total_sessions))*100)):0;const recent=[...sessions].filter(s=>terminal.includes(s.status)).sort((a,b)=>new Date(b.updated_at||b.created_at).getTime()-new Date(a.updated_at||a.created_at).getTime()).slice(0,5);if(loading)return <div className="page"><div className="student-loading-grid"><div className="skeleton-card"/><div className="skeleton-card"/><div className="skeleton-card"/><div className="skeleton-panel"/></div></div>;return <div className="page student-dashboard-page"><div className="student-hero"><div><span className="eyebrow">STUDENT DASHBOARD</span><h1>Good morning, {profile.full_name?.split(' ')[0]||'there'} 👋</h1><p>{upcoming?'Your next class is ready when you are.':enrollment?'Your program is active. Your next class will appear here once scheduled.':'Your learning journey starts here.'}</p></div>{upcoming?.meeting_url?<a className="btn primary" href={upcoming.meeting_url} target="_blank" rel="noreferrer"><Video size={15}/> Join next class</a>:<button className="btn primary" onClick={()=>openPage('program')}><GraduationCap size={15}/> View my program</button>}</div>{enrollment?<><section className="student-next panel"><div className="student-next-copy"><span className="eyebrow">NEXT CLASS</span><h2>{upcoming?`Session ${upcoming.session_number}`:'No upcoming class'}</h2><p>{upcoming?`${new Date(upcoming.scheduled_start).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})} · ${new Date(upcoming.scheduled_start).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}`:'Your teacher will schedule your next session.'}</p><div className="student-next-meta"><span>{enrollment.contract_type==='three_month'?'3-Month Program':'Monthly Program'}</span><span>Teacher: assigned</span></div></div><div className="student-next-action">{upcoming?.meeting_url?<a className="btn primary" href={upcoming.meeting_url} target="_blank" rel="noreferrer"><Video size={15}/> Join class</a>:<button className="btn" onClick={()=>openPage('schedule')}>View schedule</button>}</div></section><div className="student-kpi-grid"><div className="student-kpi"><span>Total sessions</span><strong>{enrollment.total_sessions}</strong><small>Your contracted sessions</small></div><div className="student-kpi"><span>Completed</span><strong>{completed}</strong><small>Teacher-confirmed lessons</small></div><div className="student-kpi"><span>Remaining</span><strong>{remaining}</strong><small>Sessions still to deliver</small></div><div className="student-kpi"><span>Progress</span><strong>{progress}%</strong><small>Program completion</small></div></div><div className="student-dashboard-grid"><section className="panel"><div className="panel-head"><div><h3>My program</h3><p className="panel-subtitle">Your progress at a glance.</p></div><button onClick={()=>openPage('program')}>View program <ArrowRight size={13}/></button></div><div className="student-progress-card"><div className="student-progress-top"><strong>{completed} / {enrollment.total_sessions} sessions</strong><span>{progress}%</span></div><div className="student-progress-track"><div style={{width:`${progress}%`}}/></div><div className="student-progress-meta"><span>{remaining} sessions remaining</span><span>{enrollment.postponements_total?`${Math.max(Number(enrollment.postponements_total)-Number(enrollment.postponements_used),0)} postponements left`:'No postponements included'}</span></div></div></section><section className="panel"><div className="panel-head"><div><h3>Benefits</h3><p className="panel-subtitle">Included with your contract.</p></div></div><div className="student-benefits"><div><strong>{Math.max(Number(enrollment.postponements_total||0)-Number(enrollment.postponements_used||0),0)}</strong><span>Postponements left</span></div><div><strong>{enrollment.ebook_total||0}</strong><span>Free e-books</span></div></div></section></div><section className="panel"><div className="panel-head"><div><h3>Recent attendance</h3><p className="panel-subtitle">Your latest recorded sessions.</p></div><button onClick={()=>openPage('program')}>See all <ArrowRight size={13}/></button></div>{recent.length?<div className="student-attendance-list">{recent.map(s=><div className="student-attendance-row" key={s.id}><div className={`student-attendance-icon ${s.status==='completed'?'success':['teacher_absent','teacher_cancelled','postponed','holiday'].includes(s.status)?'info':'warning'}`}><CheckCircle2 size={16}/></div><div><strong>Session {s.session_number}</strong><span>{s.scheduled_start?new Date(s.scheduled_start).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'Date pending'}</span></div><span className="program-status">{s.status.replaceAll('_',' ')}</span></div>)}</div>:<div className="empty-state"><Clock3 size={28}/><h3>No attendance records yet</h3><p>Your teacher's attendance records will appear here.</p></div>}</section></>:<section className="panel student-empty-program"><div className="student-empty-icon"><GraduationCap size={28}/></div><h2>No active program yet</h2><p>Your teacher will create your enrollment and session schedule here.</p><button className="btn primary" onClick={()=>openPage('program')}>Open My Program</button></section>}</div>}
+function StudentSchedule({profile,openPage}:{profile:any;openPage:(page:string)=>void}){const [sessions,setSessions]=useState<any[]>([]),[refreshing,setRefreshing]=useState(false);const load=async()=>{const {data}=await supabase.from('sessions').select('*').eq('student_id',profile.id).not('scheduled_start','is',null).gte('scheduled_start',new Date().toISOString()).order('scheduled_start').limit(30);setSessions(data||[])};useEffect(()=>{void load()},[profile.id]);return <div className="page student-schedule-page"><div className="page-title"><div><span className="eyebrow">SCHEDULE</span><h1>My learning schedule</h1><p>Your upcoming program sessions and preferred teaching times.</p></div><button className="btn" disabled={refreshing} onClick={async()=>{setRefreshing(true);await load();setRefreshing(false)}}><RefreshCw size={15}/> Refresh</button></div><section className="panel"><div className="panel-head"><div><h3>Upcoming classes</h3><p className="panel-subtitle">Your confirmed program sessions appear here.</p></div><button onClick={()=>openPage('program')}>Manage preferences <ArrowRight size={13}/></button></div>{sessions.length?<div className="student-schedule-list">{sessions.map(s=><div className="student-schedule-row" key={s.id}><div className="student-date-box"><strong>{new Date(s.scheduled_start).toLocaleDateString('en-US',{month:'short'}).toUpperCase()}</strong><b>{new Date(s.scheduled_start).getDate()}</b></div><div><strong>Session {s.session_number}</strong><span>{new Date(s.scheduled_start).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})} · {new Date(s.scheduled_start).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span></div><div className="student-schedule-actions">{s.meeting_url?<a className="btn primary small" href={s.meeting_url} target="_blank" rel="noreferrer"><Video size={14}/> Join</a>:<span className="program-status">{s.status.replaceAll('_',' ')}</span>}</div></div>)}</div>:<div className="empty-state"><CalendarDays size={30}/><h3>No upcoming sessions</h3><p>Your teacher will add your next sessions once your schedule is confirmed.</p></div>}</section><ProgramPreferences profile={profile}/></div>}
+function Brand(){return <button className="brand brand-link" onClick={()=>{window.history.pushState({},'','/');window.location.reload()}}><span className="brand-icon"><GraduationCap size={19}/></span><strong>TeachWithJoy</strong></button>}
