@@ -44,7 +44,6 @@ export async function checkScheduleSlot(input: {
     p_end: input.end,
     p_timezone: input.timezone ?? 'Asia/Manila',
   })
-
   if (error) throw new Error(error.message)
   return (data ?? {
     status: 'INVALID',
@@ -60,13 +59,13 @@ export async function addTeacherAvailability(input: AvailabilityInput) {
     start_time: input.startTime,
     end_time: input.endTime,
     timezone: input.timezone ?? 'Asia/Manila',
-    active: true,
+    is_active: true,
   })
   if (error) throw new Error(error.message)
 }
 
 export async function removeTeacherAvailability(teacherId: string, id: string) {
-  const { error } = await supabase.from('teacher_availability').update({ active: false }).eq('id', id).eq('teacher_id', teacherId)
+  const { error } = await supabase.from('teacher_availability').update({ is_active: false }).eq('id', id).eq('teacher_id', teacherId)
   if (error) throw new Error(error.message)
 }
 
@@ -116,6 +115,65 @@ export async function generateRecurringSeriesSessions(seriesId: string) {
   const { data, error } = await supabase.rpc('generate_recurring_series_sessions', { p_series_id: seriesId })
   if (error) throw new Error(error.message)
   return Number(data ?? 0)
+}
+
+export async function rescheduleSession(input: {
+  sessionId: string
+  start: string
+  end: string
+  reason?: string
+  timezone?: string
+}) {
+  const { data, error } = await supabase.rpc('reschedule_session', {
+    p_session_id: input.sessionId,
+    p_new_start: input.start,
+    p_new_end: input.end,
+    p_reason: input.reason ?? null,
+    p_timezone: input.timezone ?? 'Asia/Manila',
+  })
+  if (error) throw new Error(error.message)
+  return data as { session_id: string; status: string; scheduled_start: string; scheduled_end: string }
+}
+
+export async function cancelSession(input: {
+  sessionId: string
+  reason?: string
+  createReplacement?: boolean
+}) {
+  const { data, error } = await supabase.rpc('cancel_session', {
+    p_session_id: input.sessionId,
+    p_reason: input.reason ?? null,
+    p_create_replacement: input.createReplacement ?? false,
+  })
+  if (error) throw new Error(error.message)
+  return data as { session_id: string; status: string; replacement_session_id?: string | null }
+}
+
+export async function skipSession(input: { sessionId: string; reason?: string }) {
+  const { data, error } = await supabase.rpc('skip_session', {
+    p_session_id: input.sessionId,
+    p_reason: input.reason ?? null,
+  })
+  if (error) throw new Error(error.message)
+  return data as { session_id: string; status: string; counts_as_session: boolean }
+}
+
+export async function createSessionReplacement(input: {
+  sessionId: string
+  start: string
+  end: string
+  reason?: string
+  timezone?: string
+}) {
+  const { data, error } = await supabase.rpc('create_session_replacement', {
+    p_session_id: input.sessionId,
+    p_new_start: input.start,
+    p_new_end: input.end,
+    p_reason: input.reason ?? null,
+    p_timezone: input.timezone ?? 'Asia/Manila',
+  })
+  if (error) throw new Error(error.message)
+  return data as string
 }
 
 export async function logSchedulingEvent(input: {
