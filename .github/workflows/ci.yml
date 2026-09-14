@@ -2,7 +2,7 @@ name: TeachWithJoy CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/dynamic-platform-foundation]
   pull_request:
     branches: [main]
 
