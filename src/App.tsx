@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { recordActivity } from './services/platform'
-import { getNavigation } from './lib/platformConfig'
 import ManagedPublicSite from './components/ManagedPublicSite'
 import AdminSite from './components/AdminSite'
 import TeacherWorkspace from './components/TeacherWorkspace'
@@ -56,10 +55,6 @@ export default function App() {
   if (!session || !profile) return <ManagedPublicSite />
 
   const role = profile.role === 'teacher' ? 'teacher' : 'student'
-  // Resolve navigation once at the application boundary. Workspaces remain backward-compatible
-  // while the next UI iteration can consume DB-backed platform_navigation directly.
-  getNavigation(role)
-
   if (role === 'teacher') return <TeacherWorkspace profile={profile} />
   return <StudentWorkspace profile={profile} />
 }
