@@ -8,7 +8,7 @@ create table if not exists public.platform_configuration_versions (id uuid prima
 create table if not exists public.platform_search_index (id uuid primary key default gen_random_uuid(),organization_id uuid references public.organizations(id) on delete cascade,entity_type text not null,entity_id uuid not null,title text not null,subtitle text,search_text text not null,metadata jsonb not null default '{}'::jsonb,updated_at timestamptz not null default now(),unique(organization_id,entity_type,entity_id));
 create index if not exists platform_search_text_idx on public.platform_search_index using gin(to_tsvector('simple',search_text));
 
-a lter table public.organizations enable row level security;
+alter table public.organizations enable row level security;
 alter table public.organization_members enable row level security;
 alter table public.platform_workflows enable row level security;
 alter table public.platform_workflow_runs enable row level security;
