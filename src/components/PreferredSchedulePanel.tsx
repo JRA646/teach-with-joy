@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertCircle, CalendarDays, Check, Clock3, Plus, Save, Trash2 } from 'lucide-react'
+import '../program-preferences.css'
 import { supabase } from '../lib/supabase'
 
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 type Status = 'requested' | 'approved' | 'rejected'
 type Row = { id?: string; day_of_week: number; start_time: string; end_time: string; priority: number; status: Status; notes?: string }
-
 const newRow = (priority: number): Row => ({ day_of_week: 1, start_time: '18:00', end_time: '19:00', priority, status: 'requested' })
-
 function timeMinutes(value: string) { const [h, m] = value.split(':').map(Number); return h * 60 + m }
 function formatTime(value: string) { const [h, m] = value.split(':').map(Number); const date = new Date(2000, 0, 1, h, m); return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }
 
@@ -26,22 +25,14 @@ export default function PreferredSchedulePanel({ enrollmentId, onGenerated }: { 
     setRows((data || []).map(x => ({ ...x, start_time: String(x.start_time).slice(0, 5), end_time: String(x.end_time).slice(0, 5) })))
     setLoaded(true)
   }
-
   useEffect(() => { setLoaded(false); void load() }, [enrollmentId])
 
   const approvedCount = useMemo(() => rows.filter(x => x.status === 'approved').length, [rows])
   const requestedCount = useMemo(() => rows.filter(x => x.status === 'requested').length, [rows])
-
   function patch(index: number, value: Partial<Row>) { setError(''); setMessage(''); setRows(current => current.map((row, i) => i === index ? { ...row, ...value } : row)) }
   function addRow() { if (rows.length >= 7) return setError('You can add up to 7 preferred time windows.'); setError(''); setRows(current => [...current, newRow(current.length + 1)]) }
   function remove(index: number) { setError(''); setMessage(''); setRows(current => current.filter((_, i) => i !== index).map((row, i) => ({ ...row, priority: i + 1 }))) }
-
-  function validate() {
-    for (const [index, row] of rows.entries()) {
-      if (timeMinutes(row.end_time) <= timeMinutes(row.start_time)) { setError(`Preference ${index + 1}: end time must be later than start time.`); return false }
-    }
-    return true
-  }
+  function validate() { for (const [index, row] of rows.entries()) { if (timeMinutes(row.end_time) <= timeMinutes(row.start_time)) { setError(`Preference ${index + 1}: end time must be later than start time.`); return false } } return true }
 
   async function save() {
     if (!validate()) return
