@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import {
-  Bell,
   BookOpen,
   CalendarCheck,
   CalendarClock,
@@ -11,7 +10,6 @@ import {
   UserRound,
 } from 'lucide-react'
 import type { NavigationItem, PlatformRole } from '../types/platform'
-import Notifications from '../components/Notifications'
 import Messages from '../components/Messages'
 import EnhancedProfile from '../components/Profile'
 import TeacherDashboard from '../components/TeacherDashboard'
@@ -20,9 +18,6 @@ import TeacherProposals from '../components/TeacherProposals'
 import TeacherSchedule from '../components/TeacherSchedule'
 import TeacherAttendance from '../components/TeacherAttendance'
 import TeacherSubjects from '../components/TeacherSubjects'
-import ProgramWorkspace from '../components/ProgramWorkspace'
-import ProgramPreferences from '../components/ProgramPreferences'
-import StudentProposals from '../components/StudentProposals'
 
 export type WorkspaceProfile = Record<string, any>
 export type WorkspaceNavigator = (key: string) => void
@@ -56,27 +51,14 @@ const teacherRoutes: RouteDefinition[] = [
   { key: 'profile', aliases: ['/profile', '/teacher/profile'], render: profile => <EnhancedProfile profile={profile} /> },
 ]
 
-const studentRoutes: RouteDefinition[] = [
-  { key: 'dashboard', aliases: ['/'], render: (profile, navigate) => <StudentDashboardBridge profile={profile} openPage={navigate} /> },
-  { key: 'program', aliases: ['/program', '/student/program'], render: profile => <div className="student-module-stack"><ProgramWorkspace profile={profile} /><ProgramPreferences profile={profile} /></div> },
-  { key: 'proposals', aliases: ['/proposals', '/student/proposals'], render: profile => <StudentProposals profile={profile} /> },
-  { key: 'schedule', aliases: ['/schedule', '/student/schedule'], render: (profile, navigate) => <StudentScheduleBridge profile={profile} openPage={navigate} /> },
-  { key: 'messages', aliases: ['/messages', '/student/messages'], render: profile => <Messages profile={profile} /> },
-  { key: 'profile', aliases: ['/profile', '/student/profile'], render: profile => <EnhancedProfile profile={profile} /> },
-]
-
-const routesByRole: Record<string, RouteDefinition[]> = {
-  teacher: teacherRoutes,
-  student: studentRoutes,
-}
+const routesByRole: Record<string, RouteDefinition[]> = { teacher: teacherRoutes }
 
 export function getWorkspaceRoutes(role: PlatformRole | string): RouteDefinition[] {
   return routesByRole[role] || []
 }
 
 export function getWorkspacePageFromPath(role: PlatformRole | string, path = window.location.pathname): string {
-  const routes = getWorkspaceRoutes(role)
-  return routes.find(route => route.aliases.includes(path))?.key || 'dashboard'
+  return getWorkspaceRoutes(role).find(route => route.aliases.includes(path))?.key || 'dashboard'
 }
 
 export function getWorkspacePath(role: PlatformRole | string, key: string, navigation: NavigationItem[] = []): string {
@@ -85,50 +67,7 @@ export function getWorkspacePath(role: PlatformRole | string, key: string, navig
     || '/'
 }
 
-export function renderWorkspacePage(
-  role: PlatformRole | string,
-  key: string,
-  profile: WorkspaceProfile,
-  navigate: WorkspaceNavigator,
-): ReactNode {
+export function renderWorkspacePage(role: PlatformRole | string, key: string, profile: WorkspaceProfile, navigate: WorkspaceNavigator): ReactNode {
   const route = getWorkspaceRoutes(role).find(item => item.key === key)
   return route?.render(profile, navigate) || null
 }
-
-export function getNotificationButton(
-  unread: number,
-  onOpen: () => void,
-): ReactNode {
-  return <button className="notification-button" title="Notifications" onClick={onOpen}><Bell size={18}/>{unread > 0 && <span className="notification-badge">{unread > 99 ? '99+' : unread}</span>}</button>
-}
-
-function StudentDashboardBridge({ profile, openPage }: { profile: WorkspaceProfile; openPage: WorkspaceNavigator }) {
-  return <StudentDashboard profile={profile} openPage={openPage} />
-}
-
-function StudentScheduleBridge({ profile, openPage }: { profile: WorkspaceProfile; openPage: WorkspaceNavigator }) {
-  return <StudentSchedule profile={profile} openPage={openPage} />
-}
-
-function StudentDashboard({ profile, openPage }: { profile: WorkspaceProfile; openPage: WorkspaceNavigator }) {
-  return <StudentDashboardComponent profile={profile} openPage={openPage} />
-}
-
-function StudentSchedule({ profile, openPage }: { profile: WorkspaceProfile; openPage: WorkspaceNavigator }) {
-  return <StudentScheduleComponent profile={profile} openPage={openPage} />
-}
-
-// The student dashboard and schedule live in StudentWorkspace today. The registry keeps
-// routing centralized while allowing that component to supply the concrete implementations.
-let StudentDashboardComponent: (props: { profile: WorkspaceProfile; openPage: WorkspaceNavigator }) => ReactNode = () => null
-let StudentScheduleComponent: (props: { profile: WorkspaceProfile; openPage: WorkspaceNavigator }) => ReactNode = () => null
-
-export function registerStudentWorkspacePages(
-  dashboard: (props: { profile: WorkspaceProfile; openPage: WorkspaceNavigator }) => ReactNode,
-  schedule: (props: { profile: WorkspaceProfile; openPage: WorkspaceNavigator }) => ReactNode,
-) {
-  StudentDashboardComponent = dashboard
-  StudentScheduleComponent = schedule
-}
-
-export { Notifications }
